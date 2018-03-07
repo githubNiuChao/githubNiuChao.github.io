@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-minimal.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Runtime," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="runtime 是 OC底层的一套C语言的API（引入 &amp;lt;objc/runtime.h&amp;gt; 或&amp;lt;objc/message.h&amp;gt;），编译器最终都会将OC代码转化为运行时代码，通过终端命令编译.m 文件： clang -rewrite-objc xxx.m  可以看到编译后的xxx.cpp（C++文件）。 比如我们创建了一个对象 [[NSObject alloc]init]，">
+<meta name="keywords" content="Runtime">
+<meta property="og:type" content="article">
+<meta property="og:title" content="利用Runtime解决NSArray越界等问题">
+<meta property="og:url" content="http://www.niu-chao.top/2016/10/08/利用Runtime解决NSArray越界等问题/index.html">
+<meta property="og:site_name" content="一头驮砖的牛">
+<meta property="og:description" content="runtime 是 OC底层的一套C语言的API（引入 &amp;lt;objc/runtime.h&amp;gt; 或&amp;lt;objc/message.h&amp;gt;），编译器最终都会将OC代码转化为运行时代码，通过终端命令编译.m 文件： clang -rewrite-objc xxx.m  可以看到编译后的xxx.cpp（C++文件）。 比如我们创建了一个对象 [[NSObject alloc]init]，">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-03-07T07:38:10.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="利用Runtime解决NSArray越界等问题">
+<meta name="twitter:description" content="runtime 是 OC底层的一套C语言的API（引入 &amp;lt;objc/runtime.h&amp;gt; 或&amp;lt;objc/message.h&amp;gt;），编译器最终都会将OC代码转化为运行时代码，通过终端命令编译.m 文件： clang -rewrite-objc xxx.m  可以看到编译后的xxx.cpp（C++文件）。 比如我们创建了一个对象 [[NSObject alloc]init]，">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.niu-chao.top/2016/10/08/利用Runtime解决NSArray越界等问题/"/>
+
+
+
+
+
+  <title>利用Runtime解决NSArray越界等问题 | 一头驮砖的牛</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+
+    <a href="https://github.com/githubNiuChao" class="github-corner" aria-label="View source on Github"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+    
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">一头驮砖的牛</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">记录一些驮砖的经验，一起学习，一起使劲儿！！！</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-schedule">
+          <a href="/schedule/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-calendar"></i> <br />
+            
+            日程表
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sitemap">
+          <a href="/sitemap.xml" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-sitemap"></i> <br />
+            
+            站点地图
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.niu-chao.top/2016/10/08/利用Runtime解决NSArray越界等问题/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="一头驮砖的牛">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="一头驮砖的牛">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">利用Runtime解决NSArray越界等问题</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-10-08T16:23:48+08:00">
+                2016-10-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <hr>
+<blockquote>
+<p><code>runtime</code> 是 OC底层的一套C语言的API（引入 <code>&lt;objc/runtime.h&gt; 或&lt;objc/message.h&gt;</code>），编译器最终都会将OC代码转化为运行时代码，通过终端命令编译.m 文件：<font color="red"> clang -rewrite-objc xxx.m </font> 可以看到编译后的xxx.cpp（C++文件）。</p>
+<p>比如我们创建了一个对象 <code>[[NSObject alloc]init]</code>，最终被转换为几万行代码，截取最关键的一句可以看到底层是通过runtime创建的对象.cpp 文件</p>
+<p>删除掉一些强制转换语句，可以看到调用方法本质就是发消息，<code>[[NSObject alloc]init]</code> 语句发了两次消息，第一次发了alloc 消息，第二次发送init 消息。利用这个功能我们可以探究底层，比如block的实现原理。</p>
+<p>需要注意的是，使用 <font color="red"> objc_msgSend()  sel_registerName()方法需要导入头文件<code>&lt;objc/message.h&gt;</code></font> </p>
+</blockquote>
+<h2 id="利用Runtime解决NSArray和NSMutableArray数组越界的crash问题"><a href="#利用Runtime解决NSArray和NSMutableArray数组越界的crash问题" class="headerlink" title="利用Runtime解决NSArray和NSMutableArray数组越界的crash问题"></a>利用Runtime解决NSArray和NSMutableArray数组越界的crash问题</h2><p>废话不多说，直接上代码，其实是很小的功能！！！<br>首先给NSArray创建一个类别，Xcode -&gt; File -&gt; New -&gt; -&gt;File,然后在弹出的视图中选择 source目录下的 Objective-C file 选项，可以直接创建Empty FIle，Category，Protocol和Extension类型的文件，我们选择创建Category(类别文件)，class选择NSArray，名称填写为NSArray+Safe。</p>
+<h3 id="h文件"><a href="#h文件" class="headerlink" title=".h文件"></a>.h文件</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#import &lt;Foundation/Foundation.h&gt;</span></span><br><span class="line"></span><br><span class="line">/**</span><br><span class="line"> *  解决NSArray和NSMutableArray数组越界的crash问题，当debug模式下会crash报错方便调试，release模式下会返回nil</span><br><span class="line"> */</span><br><span class="line"><span class="meta">@interface NSArray (Safe)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">@end</span></span><br><span class="line"></span><br><span class="line"><span class="meta">@interface NSMutableArray (Safe)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">@end</span></span><br></pre></td></tr></table></figure>
+<h3 id="m文件"><a href="#m文件" class="headerlink" title=".m文件"></a>.m文件</h3><p>在.m文件下import <objc runtime.h="">运行文件 </objc></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#import "NSArray+Safe.h"</span></span><br><span class="line"><span class="comment">#import &lt;objc/runtime.h&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="meta">@implementation NSArray (Safe)</span></span><br><span class="line">//这个方法无论如何都会执行，而且是最开始执行</span><br><span class="line">+ (void)load &#123;</span><br><span class="line">    static dispatch_once_t onceToken;</span><br><span class="line">    dispatch_once(&amp;onceToken, ^&#123;</span><br><span class="line"><span class="meta">        @autoreleasepool &#123;</span></span><br><span class="line">            // 选择器</span><br><span class="line">            SEL safeSel = @selector(safeObjectAtIndex:);</span><br><span class="line">            SEL unsafeSel = @selector(objectAtIndex:);</span><br><span class="line">            </span><br><span class="line">            Class class = NSClassFromString(@"__NSArrayI");</span><br><span class="line">            // 方法</span><br><span class="line">            Method safeMethod = class_getInstanceMethod(class, safeSel);</span><br><span class="line">            Method unsafeMethod = class_getInstanceMethod(class, unsafeSel);</span><br><span class="line">            </span><br><span class="line">            // 交换方法</span><br><span class="line">            method_exchangeImplementations(unsafeMethod, safeMethod);</span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">- (id)safeObjectAtIndex:(NSUInteger)index &#123;</span><br><span class="line">    // 数组越界也不会崩，但是开发的时候并不知道数组越界</span><br><span class="line">    <span class="keyword">if</span> (index &gt; (self.count - <span class="number">1</span>)) &#123; // 数组越界</span><br><span class="line">        NSAssert(NO, @<span class="string">"数组越界了"</span>); // 只有开发的时候才会造成程序崩了</span><br><span class="line">        <span class="keyword">return</span> nil;</span><br><span class="line">    &#125;<span class="keyword">else</span> &#123; // 没有越界</span><br><span class="line">        <span class="keyword">return</span> [self safeObjectAtIndex:index];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">@end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@implementation NSMutableArray (SafetyArray)</span></span><br><span class="line">+ (void)load &#123;</span><br><span class="line">    static dispatch_once_t onceToken;</span><br><span class="line">    dispatch_once(&amp;onceToken, ^&#123;</span><br><span class="line"><span class="meta">        @autoreleasepool &#123;</span></span><br><span class="line">            // 选择器</span><br><span class="line">            SEL safeSel = @selector(safeObjectAtIndex:);</span><br><span class="line">            SEL unsafeSel = @selector(objectAtIndex:);</span><br><span class="line">            </span><br><span class="line">            Class class = NSClassFromString(@"__NSArrayM");</span><br><span class="line">            // 方法</span><br><span class="line">            Method safeMethod = class_getInstanceMethod(class, safeSel);</span><br><span class="line">            Method unsafeMethod = class_getInstanceMethod(class, unsafeSel);</span><br><span class="line">            </span><br><span class="line">            // 交换方法</span><br><span class="line">            method_exchangeImplementations(unsafeMethod, safeMethod);</span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">- (id)safeObjectAtIndex:(NSUInteger)index &#123;</span><br><span class="line">    // 数组越界也不会崩，但是开发的时候并不知道数组越界</span><br><span class="line">    <span class="keyword">if</span> (index &gt; (self.count - <span class="number">1</span>)) &#123; // 数组越界</span><br><span class="line">        NSAssert(NO, @<span class="string">"数组越界了"</span>); // 只有开发的时候才会造成程序崩了</span><br><span class="line">        <span class="keyword">return</span> nil;</span><br><span class="line">    &#125;<span class="keyword">else</span> &#123; // 没有越界</span><br><span class="line">        <span class="keyword">return</span> [self safeObjectAtIndex:index];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@end</span></span><br></pre></td></tr></table></figure>
+<h3 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h3><p><strong>以上代码逻辑主要是在最开始执行的load方法中，通过method_exchangeImplementations 函数去交换函数指针（OC中的方法实际上就是C的函数）IMP。</strong></p>
+<p><strong>dispatch_once这里不是“单例”，是保证方法替换只执行一次. load 方法是可以当做类方法主动调用的,为的是避免这种情况.（在我的理解中load方法是被import了以后就会被调用）<a href="http://www.molotang.com/articles/1929.html" target="_blank" rel="noopener">NSObject的load和initialize方法</a></strong></p>
+<font color="red">方法替换”这种使用情况下,发现有两种写法. 其实也不是两种写法,准确的来说一种是比较严谨的,另一种则没有那么严谨.</font>
+
+<p><strong>发现这两种写法的差异后,我主要集中在下列:</strong></p>
+<blockquote>
+<p>class_addMethod<br>class_replaceMethod<br>method_exchangeImplementations</p>
+</blockquote>
+<h2 id="利用Runtime设置字体方法-方法替换的另一种写法—-严谨的写法"><a href="#利用Runtime设置字体方法-方法替换的另一种写法—-严谨的写法" class="headerlink" title="利用Runtime设置字体方法(方法替换的另一种写法—-严谨的写法)"></a>利用Runtime设置字体方法(方法替换的另一种写法—-严谨的写法)</h2><h3 id="h文件-1"><a href="#h文件-1" class="headerlink" title=".h文件"></a>.h文件</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@interface UIFont(Swizzle)</span></span><br><span class="line"></span><br><span class="line">+(void)load;</span><br><span class="line"></span><br><span class="line"><span class="meta">@end</span></span><br></pre></td></tr></table></figure>
+<h3 id="m文件-1"><a href="#m文件-1" class="headerlink" title=".m文件"></a>.m文件</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#import "UIfont+Swizzle.h"</span></span><br><span class="line"><span class="comment">#import &lt;objc/runtime.h&gt;</span></span><br><span class="line"><span class="comment">#import &lt;objc/message.h&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="meta">@implementation UIFont(Swizzle)</span></span><br><span class="line"></span><br><span class="line">+(void)load&#123;</span><br><span class="line">	static dispatch_once_t onceToken;</span><br><span class="line">    dispatch_once(&amp;onceToken, ^&#123;</span><br><span class="line"></span><br><span class="line">    	[UIFont swizzleMethodOrginalMtd:@selector(systemFontOfSize:) newMtd:@selector(myFontOfSize:)];</span><br><span class="line">    	[UIFont swizzleMethodOrginalMtd:@selector(boldSystemFontOfSize:) newMtd:@selector(myboldFontOfSize:)];</span><br><span class="line"></span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">+ (BOOL)swizzleMethodOrginalMtd:(SEL)origSelector newMtd:(SEL)altSelector&#123;</span><br><span class="line">    </span><br><span class="line">    Method origMethod = class_getClassMethod([self class], origSelector);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (nil == origMethod) &#123;</span><br><span class="line">        <span class="keyword">return</span> NO;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    Method altMethod = class_getClassMethod([self class], altSelector);</span><br><span class="line">    <span class="keyword">if</span> (nil == altMethod) &#123;</span><br><span class="line">        <span class="keyword">return</span> NO;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    BOOL didAddMethod =</span><br><span class="line">    class_addMethod([self class],</span><br><span class="line">                    origSelector,</span><br><span class="line">                    method_getImplementation(altMethod),</span><br><span class="line">                    method_getTypeEncoding(altMethod));</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> (didAddMethod) &#123;</span><br><span class="line">        class_replaceMethod([self class],</span><br><span class="line">                            altSelector,</span><br><span class="line">                            method_getImplementation(origMethod),</span><br><span class="line">                            method_getTypeEncoding(origMethod));</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        method_exchangeImplementations(origMethod, altMethod);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> YES;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">+ (UIFont *)myFontOfSize:(CGFloat)fontSize&#123;</span><br><span class="line">    <span class="keyword">return</span> [UIFont fontWithName: @<span class="string">"Avenir-Light"</span> size:fontSize];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">+ (UIFont *)myboldFontOfSize:(CGFloat)fontSize&#123;</span><br><span class="line">    <span class="keyword">return</span> [UIFont fontWithName:@<span class="string">"Avenir-Medium"</span> size:fontSize];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="说明"><a href="#说明" class="headerlink" title="说明:"></a>说明:</h3><p><code>class_addMethod</code>:如果发现方法已经存在，会失败返回，也可以用来做检查用,我们这里是为了避免源方法没有实现的情况;如果方法没有存在,我们则先尝试添加被替换的方法的实现</p>
+<p>1.如果返回成功:则说明被替换方法没有存在.也就是被替换的方法没有被实现,我们需要先把这个方法实现,然后再执行我们想要的效果,用我们自定义的方法去替换被替换的方法. 这里使用到的是<code>class_replaceMethod</code> 这个方法. <code>class_replaceMethod</code>本身会尝试调用<code>class_addMethod</code>和<code>method_setImplementation</code>，所以直接调用<code>class_replaceMethod</code>就可以了)</p>
+<p>2.如果返回失败:则说明被替换方法已经存在.直接将两个方法的实现交换即可</p>
+<p>另外:</p>
+<blockquote>
+<p><strong>我们可以利用 method_exchangeImplementations 来交换2个方法中的IMP</strong><br><strong>我们可以利用 class_replaceMethod 来修改类</strong><br><strong>我们可以利用 method_setImplementation 来直接设置某个方法的IMP</strong></p>
+</blockquote>
+<p>其实我们如果 研究过 AFN 代码的话,会发现, AFN 就是第二种写法.在AFURLSessionManager.m的第296行:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">static inline void af_swizzleSelector(Class class, SEL originalSelector, SEL swizzledSelector) &#123;</span><br><span class="line">    Method originalMethod = class_getInstanceMethod(class, originalSelector);</span><br><span class="line">    Method swizzledMethod = class_getInstanceMethod(class, swizzledSelector);</span><br><span class="line">    if (class_addMethod(class, originalSelector, method_getImplementation(swizzledMethod), method_getTypeEncoding(swizzledMethod))) &#123;</span><br><span class="line">        class_replaceMethod(class, swizzledSelector, method_getImplementation(originalMethod), method_getTypeEncoding(originalMethod));</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        method_exchangeImplementations(originalMethod, swizzledMethod);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="Runtime运行时添加属性，或者block属性"><a href="#Runtime运行时添加属性，或者block属性" class="headerlink" title="Runtime运行时添加属性，或者block属性"></a>Runtime运行时添加属性，或者block属性</h2><h3 id="知识点"><a href="#知识点" class="headerlink" title="知识点"></a>知识点</h3><blockquote>
+<p>key：要保证全局唯一，key与关联的对象是一一对应关系。必须全局唯一。通常用@selector(methodName)作为key。<br>value：要关联的对象。<br>policy：关联策略。有五种关联策略。<br>OBJC_ASSOCIATION_ASSIGN 等价于 @property(assign)。<br>OBJC_ASSOCIATION_RETAIN_NONATOMIC等价于 @property(strong, nonatomic)。<br>OBJC_ASSOCIATION_COPY_NONATOMIC等价于@property(copy, nonatomic)。<br>OBJC_ASSOCIATION_RETAIN等价于@property(strong,atomic)。<br>OBJC_ASSOCIATION_COPY等价于@property(copy, atomic)。</p>
+</blockquote>
+<h3 id="h"><a href="#h" class="headerlink" title=".h"></a>.h</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#import &lt;UIKit/UIKit.h&gt;</span></span><br><span class="line"></span><br><span class="line">typedef void (^btnBlock)(id sender);</span><br><span class="line"></span><br><span class="line"><span class="meta">@interface UIButton (Block)</span></span><br><span class="line"></span><br><span class="line">- (void)handelWithBlock:(btnBlock)block;</span><br><span class="line"></span><br><span class="line"><span class="meta">@end</span></span><br></pre></td></tr></table></figure>
+<h3 id="m"><a href="#m" class="headerlink" title=".m"></a>.m</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#import "UIButton+Block.h"</span></span><br><span class="line"><span class="comment">#import &lt;objc/runtime.h&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="meta">@implementation UIButton (Block)</span></span><br><span class="line"></span><br><span class="line">- (void)handelWithBlock:(btnBlock)block &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (block) &#123;</span><br><span class="line">        objc_setAssociatedObject(self,@selector(btnAction:) , block, OBJC_ASSOCIATION_RETAIN_NONATOMIC);</span><br><span class="line">    &#125;</span><br><span class="line">    [self addTarget:self action:@selector(btnAction:) forControlEvents:UIControlEventTouchUpInside];</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (void)btnAction:(id)sender</span><br><span class="line">&#123;</span><br><span class="line">    btnBlock block = objc_getAssociatedObject(self,@selector(btnAction:));</span><br><span class="line">    <span class="keyword">if</span> (block) &#123;</span><br><span class="line">        block(sender);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@end</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>注意：</strong>@selector(btnAction:) 部分是第二个参数 ;类型通常都是通常都是会采用静态变量<code>static const char btnKey</code> 来作为关键字 <code>&amp;btnkey</code> ,也可以使用”@selector(btnAction:) “。</p>
+<p><strong>第二个参数进一步优化，出现了<code>_cmd</code> 代替了 &amp;btnKey 或者 @selector(methodName).</strong></p>
+</blockquote>
+<p><strong>因为：</strong></p>
+<blockquote>
+<p><strong><code>_cmd</code>在Objective-C的方法中表示当前方法的selector，正如同self表示当前方法调用的对象实例.
+</strong>这里强调当前，<code>_cmd</code>的作用域只在当前方法里，直指当前方法名@selector。**</p>
+</blockquote>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Runtime/" rel="tag"># Runtime</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/10/08/MarkDown/" rel="next" title="Markdown">
+                <i class="fa fa-chevron-left"></i> Markdown
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">一头驮砖的牛</p>
+              <p class="site-description motion-element" itemprop="description">记录一些驮砖的经验，一起学习，一起使劲儿！！！</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">标签</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#利用Runtime解决NSArray和NSMutableArray数组越界的crash问题"><span class="nav-number">1.</span> <span class="nav-text">利用Runtime解决NSArray和NSMutableArray数组越界的crash问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#h文件"><span class="nav-number">1.1.</span> <span class="nav-text">.h文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#m文件"><span class="nav-number">1.2.</span> <span class="nav-text">.m文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#解析"><span class="nav-number">1.3.</span> <span class="nav-text">解析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#利用Runtime设置字体方法-方法替换的另一种写法—-严谨的写法"><span class="nav-number">2.</span> <span class="nav-text">利用Runtime设置字体方法(方法替换的另一种写法—-严谨的写法)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#h文件-1"><span class="nav-number">2.1.</span> <span class="nav-text">.h文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#m文件-1"><span class="nav-number">2.2.</span> <span class="nav-text">.m文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#说明"><span class="nav-number">2.3.</span> <span class="nav-text">说明:</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Runtime运行时添加属性，或者block属性"><span class="nav-number">3.</span> <span class="nav-text">Runtime运行时添加属性，或者block属性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#知识点"><span class="nav-number">3.1.</span> <span class="nav-text">知识点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#h"><span class="nav-number">3.2.</span> <span class="nav-text">.h</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#m"><span class="nav-number">3.3.</span> <span class="nav-text">.m</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">一头驮砖的牛</span>
+
+  
+</div>
+
+
+ <!-- <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v</div>
+-->
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v="></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v="></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v="></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v="></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v="></script>
+<script type="text/javascript" src="/js/src/post-details.js?v="></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v="></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
