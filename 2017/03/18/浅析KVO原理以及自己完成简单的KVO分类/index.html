@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-minimal.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="IOS," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="KVO KVO 是 Objective-C 对观察者设计模式的一种实现。【另外一种是：通知机制（notification）】；KVO 提供一种机制，指定一个被观察对象(例如 A 类)，当对象某个属性(例如 A 中的字符串 name)发生更改时，对象会获得通知，并作出相应处理；【且不需要给被观察的对象添加任何额外代码，就能使用 KVO 机制】  在 MVC 设计架构下的项目，KVO 机制很适合实现">
+<meta name="keywords" content="IOS">
+<meta property="og:type" content="article">
+<meta property="og:title" content="浅析KVO原理以及自己完成简单的KVO代码实现">
+<meta property="og:url" content="http://www.niu-chao.top/2017/03/18/浅析KVO原理以及自己完成简单的KVO分类/index.html">
+<meta property="og:site_name" content="一头驮砖的牛">
+<meta property="og:description" content="KVO KVO 是 Objective-C 对观察者设计模式的一种实现。【另外一种是：通知机制（notification）】；KVO 提供一种机制，指定一个被观察对象(例如 A 类)，当对象某个属性(例如 A 中的字符串 name)发生更改时，对象会获得通知，并作出相应处理；【且不需要给被观察的对象添加任何额外代码，就能使用 KVO 机制】  在 MVC 设计架构下的项目，KVO 机制很适合实现">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-03-13T12:13:00.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="浅析KVO原理以及自己完成简单的KVO代码实现">
+<meta name="twitter:description" content="KVO KVO 是 Objective-C 对观察者设计模式的一种实现。【另外一种是：通知机制（notification）】；KVO 提供一种机制，指定一个被观察对象(例如 A 类)，当对象某个属性(例如 A 中的字符串 name)发生更改时，对象会获得通知，并作出相应处理；【且不需要给被观察的对象添加任何额外代码，就能使用 KVO 机制】  在 MVC 设计架构下的项目，KVO 机制很适合实现">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '',
+    sidebar: {"position":"right","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.niu-chao.top/2017/03/18/浅析KVO原理以及自己完成简单的KVO分类/"/>
+
+
+
+
+
+  <title>浅析KVO原理以及自己完成简单的KVO代码实现 | 一头驮砖的牛</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail">
+    <div class="headband"></div>
+
+
+    <a href="https://github.com/githubNiuChao" class="github-corner" aria-label="View source on Github"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+    
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">一头驮砖的牛</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.niu-chao.top/2017/03/18/浅析KVO原理以及自己完成简单的KVO分类/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="一头驮砖的牛">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">浅析KVO原理以及自己完成简单的KVO代码实现</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-03-18T17:44:48+08:00">
+                2017-03-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <hr>
+<h2 id="KVO"><a href="#KVO" class="headerlink" title="KVO"></a>KVO</h2><blockquote>
+<p>KVO 是 Objective-C 对观察者设计模式的一种实现。【另外一种是：通知机制（notification）】；<br>KVO 提供一种机制，指定一个被观察对象(例如 A 类)，当对象某个属性(例如 A 中的字符串 name)发生更改时，对象会获得通知，并作出相应处理；【且不需要给被观察的对象添加任何额外代码，就能使用 KVO 机制】</p>
+</blockquote>
+<p>在 MVC 设计架构下的项目，KVO 机制很适合实现 mode 模型和 view 视图之间的通讯。<br>例如：代码中，在模型类A创建属性数据，在控制器中创建观察者，一旦属性数据发生改变就收到观察者收到通知，通过 KVO 再在控制器使用回调方法处理实现视图 B 的更新；</p>
+<h2 id="实现原理"><a href="#实现原理" class="headerlink" title="实现原理"></a>实现原理</h2><p>KVO 在 Apple 中的 API 文档如下：</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">    Automatic key-value observing is implemented using a technique called </span><br><span class="line">isa-swizzling… When an observer is registered <span class="keyword">for</span> an attribute of an object the </span><br><span class="line">isa pointer of the observed object is modified, pointing to an intermediate <span class="keyword">class</span> </span><br><span class="line">rather than at the <span class="literal">true</span> <span class="keyword">class</span> …</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>KVO 的实现依赖于 Objective-C 强大的 <code>Runtime</code>，从以上 Apple 的文档可以看出苹果对于 KVO 机制的实现是一笔带过，而具体的细节没有过多的描述，关于KVO 机制的底层实现原理，从网上的一些关于 KVO 的资料总结了有关的内容：</p>
+</blockquote>
+<h3 id="基本原理"><a href="#基本原理" class="headerlink" title="基本原理"></a>基本原理</h3><blockquote>
+<p>1、KVO是基于<code>runtime</code>机制实现的</p>
+<p>2、当某个类的属性对象第一次被观察时，系统就会在运行期动态地创建该类的一个派生类，在这个派生类中重写基类中任何被观察属性的setter 方法。派生类在被重写的setter方法内实现真正的通知机制</p>
+<p>3、如果原类为Person，那么生成的派生类名为NSKVONotifying_Person</p>
+<p>4、每个类对象中都有一个isa指针指向当前类，当一个类对象的第一次被观察，那么系统会偷偷将isa指针指向动态生成的派生类，从而在给被监控属性赋值时执行的是派生类的setter方法</p>
+<p>5、键值观察通知依赖于NSObject 的两个方法:<code>willChangeValueForKey:</code> 和 <code>didChangevlueForKey:</code>；在一个被观察属性发生改变之前， <code>willChangeValueForKey:</code>一定会被调用，这就 会记录旧的值。而当改变发生后，<code>didChangeValueForKey:</code>会被调用，继而 <code>observeValueForKey:ofObject:change:context:</code> 也会被调用。</p>
+</blockquote>
+<h3 id="深度剖析"><a href="#深度剖析" class="headerlink" title="深度剖析"></a>深度剖析</h3><blockquote>
+<p>Apple 使用了 isa 混写（isa-swizzling）来实现 KVO 。当观察对象A时，KVO机制动态创建一个新的名为：NSKVONotifying_A 的新类，该类继承自对象A的本类，且 KVO 为 NSKVONotifying_A 重写观察属性的 setter 方法，setter 方法会负责在调用原 setter 方法之前和之后，通知所有观察对象属性值的更改情况。<br><strong>（备注： isa 混写（isa-swizzling）isa：is a kind of ； swizzling：混合，搅合；）</strong></p>
+<p>1、NSKVONotifying_A 类剖析：在这个过程，被观察对象的 isa 指针从指向原来的 A 类，被 KVO 机制修改为指向系统新创建的子类 NSKVONotifying_A 类，来实现当前类属性值改变的监听；<br>所以当我们从应用层面上看来，完全没有意识到有新的类出现，这是系统“隐瞒”了对 KVO 的底层实现过程，让我们误以为还是原来的类。但是此时如果我们创建一个新的名为“NSKVONotifying_A”的类，就会发现系统运行到注册 KVO 的那段代码时程序就崩溃，因为系统在注册监听的时候动态创建了名为 NSKVONotifying_A 的中间类，并指向这个中间类了。<br><strong>（备注：isa 指针的作用：每个对象都有 isa 指针，指向该对象的类，它告诉 Runtime 系统这个对象的类是什么。所以对象注册为观察者时，isa 指针指向新子类，那么这个被观察的对象就神奇地变成新子类的对象（或实例）了。） 因而在该对象上对 setter 的调用就会调用已重写的 setter，从而激活键值通知机制。</strong><br><strong>这也是 KVO 回调机制，为什么都俗称KVO技术为黑魔法的原因之一吧：内部神秘、外观简洁。</strong></p>
+<p>2、子类setter方法剖析：KVO 的键值观察通知依赖于 NSObject 的两个方法:willChangeValueForKey:和 didChangevlueForKey:，在存取数值的前后分别调用 2个方法：被观察属性发生改变之前，willChangeValueForKey:被调用，通知系统该 keyPath 的属性值即将变更；当改变发生后， didChangeValueForKey: 被调用，通知系统该 keyPath 的属性值已经变更；之后，observeValueForKey:ofObject:change:context: 也会被调用。且重写观察属性的 setter 方法这种继承方式的注入是在运行时而不是编译时实现的。</p>
+</blockquote>
+<h3 id="相关特点"><a href="#相关特点" class="headerlink" title="相关特点"></a>相关特点</h3><blockquote>
+<p>观察者观察的是属性，只有遵循 KVO 变更属性值的方式才会执行 KVO 的回调方法，例如是否执行了 setter 方法、或者是否使用了 KVC 赋值。如果赋值没有通过 setter 方法或者 KVC，而是直接修改属性对应的成员变量，例如：仅调用 <code>_name = @&quot;newName&quot;</code>，这时是不会触发 KVO 机制，更加不会调用回调方法的。所以使用 KVO 机制的前提是遵循 KVO 的属性设置方式来变更属性值。</p>
+</blockquote>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p><strong>代码由<code>ViewController</code>（观察者）、<code>NSObject+NCKVO</code>（KVO实现）、<code>NCperson</code>（被观察者）、<code>Dog</code>（扩展类），几个类组成，分为五项代码线流程进行演示；</strong></p>
+<h3 id="ViewController"><a href="#ViewController" class="headerlink" title="ViewController"></a>ViewController</h3><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br></pre></td><td class="code"><pre><span class="line">.h</span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;UIKit/UIKit.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">ViewController</span> : <span class="title">UIViewController</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">.m</span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">"ViewController.h"</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">"NCperson.h"</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">"NSObject+NCKVO.h"</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;objc/message.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">/**拓展</span></span><br><span class="line"><span class="comment"> NSKeyValueObservingOptionNew           返回新值</span></span><br><span class="line"><span class="comment"> NSKeyValueObservingOptionOld           返回旧值</span></span><br><span class="line"><span class="comment"> NSKeyValueObservingOptionInitial       注册的时候就会发一次通知，改变后也会发通知</span></span><br><span class="line"><span class="comment"> NSKeyValueObservingOptionPrior         改变之前发一次，改变之后发一次</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> 打印出的kind = 1  表示的为set方法</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">ViewController</span> ()</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) NCperson *p;</span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">ViewController</span></span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)viewDidLoad &#123;</span><br><span class="line">    [<span class="keyword">super</span> viewDidLoad];</span><br><span class="line"></span><br><span class="line">    NCperson *person = [[NCperson alloc] init];</span><br><span class="line"></span><br><span class="line"><span class="comment">//    一.系统方法添加观察者</span></span><br><span class="line"><span class="comment">//    [person addObserver:self forKeyPath:@"name" options:NSKeyValueObservingOptionNew context:nil];</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//    二.循环观察，观察子类中的属性  利用属性依赖直接实现</span></span><br><span class="line"><span class="comment">//    [person addObserver:self forKeyPath:@"dog.age" options:NSKeyValueObservingOptionNew context:nil];</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//    三.观察内部属性(容器)dog类中的多个属性</span></span><br><span class="line"><span class="comment">//    [person addObserver:self forKeyPath:@"dog" options:NSKeyValueObservingOptionNew context:nil];</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//    四.KVO实际上是对属性（成员变量、set、get）的Set方法观察，单纯的观察成员变量是不能实现KVO的；</span></span><br><span class="line"><span class="comment">//    [person addObserver:self forKeyPath:@"code" options:NSKeyValueObservingOptionNew context:nil];</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//   ********* 五.手动实现KVO 原理：1、利用运行时动态的创建了一个NSKVONotifying_NCperson 的一个派生类；</span></span><br><span class="line"><span class="comment">//                              2、动态修改了person对象的的isa指针，让它指向了NSKVONotifying_NCperson这个子类。</span></span><br><span class="line"><span class="comment">//                              3.添加派生类（子类）的setName方法 == 重写父类的setName方法，重写本质就添加</span></span><br><span class="line">    [person NC_addObserver:<span class="keyword">self</span> forKeyPath:<span class="string">@"name"</span> options:<span class="built_in">NSKeyValueObservingOptionNew</span> context:<span class="literal">nil</span>];</span><br><span class="line"></span><br><span class="line">    _p = person;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)observeValueForKeyPath:(<span class="built_in">NSString</span> *)keyPath ofObject:(<span class="keyword">id</span>)object change:(<span class="built_in">NSDictionary</span>&lt;<span class="built_in">NSKeyValueChangeKey</span>,<span class="keyword">id</span>&gt; *)change context:(<span class="keyword">void</span> *)context&#123;</span><br><span class="line">    <span class="comment">//五.传过来的object为子类（派生类），不知道正确不正确</span></span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"成功通知到了新值：%@"</span>,change);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)touchesBegan:(<span class="built_in">NSSet</span>&lt;<span class="built_in">UITouch</span> *&gt; *)touches withEvent:(<span class="built_in">UIEvent</span> *)event&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> a = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">//    一.手动添加KVO (观察者类中关闭自动模式)，实现手动观察方法 will  did ；</span></span><br><span class="line"><span class="comment">//    [_p willChangeValueForKey:@"name"];</span></span><br><span class="line"><span class="comment">//    _p.name = [NSString stringWithFormat:@"%d", a++];</span></span><br><span class="line"><span class="comment">//    [_p didChangeValueForKey:@"name"];</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//    二.循环观察，观察子类中的属性  利用属性依赖直接实现</span></span><br><span class="line"><span class="comment">//    _p.dog.age = a++;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//    三.观察内部属性(容器)dog类中的多个属性 ，KVO的本质是观察set方法，需结合KVC去实现</span></span><br><span class="line"><span class="comment">//    _p.dog.age = a++;</span></span><br><span class="line"><span class="comment">//    _p.dog.height = a++;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//    四.KVO实际上是对属性（成员变量、set、get）的Set方法观察，单纯的观察成员变量是不能实现KVO的；</span></span><br><span class="line"><span class="comment">//    _p-&gt;code = [NSString stringWithFormat:@"%d",a++]; // -&gt; 访问成员变量</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//    五.手动实现KVO 原理：1、利用运行时动态的创建了一个NSKVONotifying_NCperson 的一个派生类；</span></span><br><span class="line"><span class="comment">//                     2、动态修改了person对象的的isa指针，让它指向了NSKVONotifying_NCperson这个子类。</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//    _p.name = [NSString stringWithFormat:@"%d",a++];</span></span><br><span class="line">    objc_msgSend(_p,<span class="keyword">@selector</span>(setName:),[<span class="built_in">NSString</span> stringWithFormat:<span class="string">@"%d"</span>,a++]);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"修改了%@"</span>,_p.name);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<h3 id="NSObject-NCKVO-头部拓展可忽略"><a href="#NSObject-NCKVO-头部拓展可忽略" class="headerlink" title="NSObject+NCKVO (头部拓展可忽略)"></a>NSObject+NCKVO (头部拓展可忽略)</h3><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="built_in">NSObject</span>+NCKVO.h</span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;Foundation/Foundation.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">NSObject</span> (<span class="title">NCKVO</span>)</span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)NC_addObserver:(<span class="built_in">NSObject</span> *)observer forKeyPath:(<span class="built_in">NSString</span> *)keyPath options:(<span class="built_in">NSKeyValueObservingOptions</span>)options context:(<span class="keyword">void</span> *)context;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="built_in">NSObject</span>+NCKVO.m</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">"NSObject+NCKVO.h"</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;objc/runtime.h&gt;</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;objc/message.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/*拓展</span></span><br><span class="line"><span class="comment"> 方法、成员变量、类、对象</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> Class</span></span><br><span class="line"><span class="comment"> typedef struct objc_class *Class;</span></span><br><span class="line"><span class="comment"> Class 其实是指向 objc_class 结构体的指针。objc_class 的数据结构如下：</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> struct objc_class &#123;</span></span><br><span class="line"><span class="comment"> Class isa  OBJC_ISA_AVAILABILITY;</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> #if !__OBJC2__</span></span><br><span class="line"><span class="comment"> Class super_class                                        OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"> const char *name                                         OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"> long version                                             OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"> long info                                                OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"> long instance_size                                       OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"> struct objc_ivar_list *ivars                             OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"> struct objc_method_list **methodLists                    OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"> struct objc_cache *cache                                 OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"> struct objc_protocol_list *protocols                     OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"> #endif</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> &#125; OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"> 从 objc_class 可以看到，一个运行时类中关联了它的父类指针、类名、成员变量、方法、缓存以及附属的协议。</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> 其中 objc_ivar_list 和 objc_method_list 分别是成员变量列表和方法列表：</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> // 成员变量列表</span></span><br><span class="line"><span class="comment"> struct objc_ivar_list &#123;</span></span><br><span class="line"><span class="comment"> int ivar_count                                           OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"> #ifdef __LP64__</span></span><br><span class="line"><span class="comment"> int space                                                OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"> #endif</span></span><br><span class="line"><span class="comment"> variable length structure</span></span><br><span class="line"><span class="comment">struct objc_ivar ivar_list[1]                            OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment">&#125;                                                            OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">// 方法列表</span></span><br><span class="line"><span class="comment">struct objc_method_list &#123;</span></span><br><span class="line"><span class="comment">    struct objc_method_list *obsolete                        OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">    int method_count                                         OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment">#ifdef __LP64__</span></span><br><span class="line"><span class="comment">    int space                                                OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment">#endif</span></span><br><span class="line"><span class="comment">    variable length structure</span></span><br><span class="line"><span class="comment">    struct objc_method method_list[1]                        OBJC2_UNAVAILABLE;</span></span><br><span class="line"><span class="comment">&#125;</span></span><br><span class="line"><span class="comment">由此可见，我们可以动态修改 *methodList 的值来添加成员方法，这也是 Category 实现的原理，同样解释了 Category 不能添加属性的原因。这里可以参考下美团技术团队的文章：深入理解 Objective-C: Category。</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/*拓展：调用方法本质就是发送消息：objc_sendMsg()</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">     类---&gt;SEL(方法编号) ---&gt; IMP（方法实现的函数指针）</span></span><br><span class="line"><span class="comment">     添加子类的setName方法 == 重写父类的setName方法，重写本质就添加，因为子类虽然继承于父类，但是本质上子类是没有setName方法的，它可以去找到父类的方法，但不等同于它有setName方法；</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#define force_inline __inline__ __attribute__((always_inline))// 未用</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">NSObject</span> (<span class="title">NCKVO</span>)</span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)NC_addObserver:(<span class="built_in">NSObject</span> *)observer forKeyPath:(<span class="built_in">NSString</span> *)keyPath options:(<span class="built_in">NSKeyValueObservingOptions</span>)options context:(<span class="keyword">void</span> *)context&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//1.动态的创建一个派生类：NSKVONotifying_NCperson；</span></span><br><span class="line">    <span class="built_in">NSString</span> *oldClassName = <span class="built_in">NSStringFromClass</span>(<span class="keyword">self</span>.class);</span><br><span class="line">    <span class="built_in">NSString</span> *newClassName = [<span class="string">@"NCKVO_"</span> stringByAppendingString:oldClassName];</span><br><span class="line"></span><br><span class="line">    <span class="comment">//运行时创建类</span></span><br><span class="line">    Class myClass = objc_allocateClassPair(<span class="keyword">self</span>.class, [newClassName UTF8String], <span class="number">0</span>);</span><br><span class="line">    <span class="comment">//注册类</span></span><br><span class="line">    objc_registerClassPair(myClass);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//2.动态修改了person对象的的isa指针，让它指向了NSKVONotifying_NCperson这个子类</span></span><br><span class="line">    object_setClass(<span class="keyword">self</span>, myClass);</span><br><span class="line"></span><br><span class="line"><span class="comment">//    3.添加派生类（子类）的setName方法 == 重写父类的setName方法，重写本质就添加，因为子类虽然继承于父类，但是本质上子类是没有setName方法的，它可以去找到父类的方法，但不等同于它有setName方法；</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/*****  拓展：调用方法本质就是发送消息：objc_sendMsg()</span></span><br><span class="line"><span class="comment">     类---&gt;SEL(方法编号) ---&gt; IMP（方法实现的函数指针）</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="comment">//oc方法 SEL IMP 第四个参数：添加这个方法它的方法类型</span></span><br><span class="line">    <span class="comment">//当第三个参数IMP有参数的情况下需要强转</span></span><br><span class="line">    <span class="comment">//第四个参数type"v@:" 变成"v@:@",其中v表示void，@表示对象参数，：表示sel，@还是表示对象参数，可在开发文档中查询</span></span><br><span class="line"></span><br><span class="line">    class_addMethod(myClass, <span class="keyword">@selector</span>(setName:), (IMP)impSetName, <span class="string">"v@:@"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//4.将观察者保存到当前的对象当中,当前例子中观察者应该是ViewController</span></span><br><span class="line">    objc_setAssociatedObject(<span class="keyword">self</span>,<span class="string">"observer"</span>,observer,OBJC_ASSOCIATION_ASSIGN);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//OC中方法的调用里面有两个隐藏的参数！！！ 1、id self  2、SEL _cmd</span></span><br><span class="line"><span class="comment">//objc_msgSend(_p,@selector(setName:),[NSString stringWithFormat:@"%d",a++]);</span></span><br><span class="line"><span class="comment">//***要想获得第三个参数的值必须在参数列表中补齐 id self,SEL _cmd</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">void</span> impSetName(<span class="keyword">id</span> <span class="keyword">self</span>,SEL _cmd,<span class="built_in">NSString</span> *name)&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">id</span> <span class="keyword">class</span> = [<span class="keyword">self</span> <span class="keyword">class</span>];</span><br><span class="line">    <span class="comment">//修改子类与父类的isa</span></span><br><span class="line">    object_setClass(<span class="keyword">self</span>, class_getSuperclass([<span class="keyword">self</span> <span class="keyword">class</span>]));</span><br><span class="line">    <span class="comment">//给父类发送消息，让他拿到newName的值</span></span><br><span class="line">    objc_msgSend(<span class="keyword">self</span>, <span class="keyword">@selector</span>(setName:),name);</span><br><span class="line">    <span class="comment">//再修改回来子类与父类的isa</span></span><br><span class="line">    object_setClass(<span class="keyword">self</span>, <span class="keyword">class</span>);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"父类拿到了新值：%@"</span>,name);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//取出观察者,当前例子中观察者应该是ViewController</span></span><br><span class="line">    <span class="keyword">id</span> observer = objc_getAssociatedObject(<span class="keyword">self</span>, <span class="string">"observer"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//给观察者发送消息，并发送change值，当前传过去的self为子类（派生类）</span></span><br><span class="line">    <span class="built_in">NSDictionary</span> *change = [<span class="built_in">NSDictionary</span> dictionaryWithObjectsAndKeys:<span class="string">@"1"</span>,<span class="string">@"kind"</span>,name,<span class="string">@"new"</span>, <span class="literal">nil</span>];</span><br><span class="line">    objc_msgSend(observer, <span class="keyword">@selector</span>(observeValueForKeyPath:ofObject:change:context:),<span class="string">@"name"</span>,<span class="keyword">self</span>,change,<span class="literal">nil</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<h3 id="NCperson"><a href="#NCperson" class="headerlink" title="NCperson"></a>NCperson</h3><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line">    </span><br><span class="line">NCperson.h</span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;Foundation/Foundation.h&gt;</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">"Dog.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">NCperson</span> : <span class="title">NSObject</span></span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">@public</span></span><br><span class="line">    <span class="built_in">NSString</span> *code;  <span class="comment">//类的属性实质是是成员变量、set、get方法的封装，而KVO实际上是对Set方法的观察</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">copy</span>) <span class="built_in">NSString</span> *name;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) Dog *dog;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSMutableArray</span> *mArray;</span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">NCperson.m</span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">"NCperson.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">NCperson</span></span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">instancetype</span>)init&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">self</span> = [<span class="keyword">super</span> init]) &#123;</span><br><span class="line">        _dog = [[Dog alloc] init];</span><br><span class="line">        _mArray = <span class="built_in">NSMutableArray</span>.array;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">self</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//三.返回一个容器，里面是字符串类型！ key：被观察的key字符串</span></span><br><span class="line"><span class="comment">//+ (NSSet&lt;NSString *&gt; *)keyPathsForValuesAffectingValueForKey:(NSString *)key&#123;</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//    NSLog(@"%@",key);</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//    NSSet *set = [super keyPathsForValuesAffectingValueForKey:key];</span></span><br><span class="line"><span class="comment">//    if ([key isEqualToString:@"dog"]) &#123;</span></span><br><span class="line"><span class="comment">//        NSArray *array = @[@"_dog.age",@"_dog.height"];</span></span><br><span class="line"><span class="comment">//        set = [set setByAddingObjectsFromArray:array];</span></span><br><span class="line"><span class="comment">//    &#125;</span></span><br><span class="line"><span class="comment">//    return set;</span></span><br><span class="line"><span class="comment">//&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//一.默认为自动通知模式的KVO；这将其关闭，实现手动KVO</span></span><br><span class="line"><span class="comment">//+ (BOOL)automaticallyNotifiesObserversForKey:(NSString *)key&#123;</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//    return NO;</span></span><br><span class="line"><span class="comment">//&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<h3 id="Dog"><a href="#Dog" class="headerlink" title="Dog"></a>Dog</h3><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">Dog.h</span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;Foundation/Foundation.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">Dog</span> : <span class="title">NSObject</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span> ,<span class="keyword">assign</span>) <span class="keyword">int</span> age;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span> ,<span class="keyword">assign</span>) <span class="keyword">int</span> height;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Dog.m</span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">"Dog.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">Dog</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<p><strong>以上就是代码的实现，很简单，盼指点！！！</strong></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/IOS/" rel="tag"># IOS</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/10/08/利用Runtime解决NSArray越界等问题/" rel="next" title="利用Runtime解决NSArray越界等问题">
+                <i class="fa fa-chevron-left"></i> 利用Runtime解决NSArray越界等问题
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/avatar.jpg"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description">关注 Ios | Python 开发</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#KVO"><span class="nav-number">1.</span> <span class="nav-text">KVO</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现原理"><span class="nav-number">2.</span> <span class="nav-text">实现原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#基本原理"><span class="nav-number">2.1.</span> <span class="nav-text">基本原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#深度剖析"><span class="nav-number">2.2.</span> <span class="nav-text">深度剖析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#相关特点"><span class="nav-number">2.3.</span> <span class="nav-text">相关特点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#代码实现"><span class="nav-number">3.</span> <span class="nav-text">代码实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ViewController"><span class="nav-number">3.1.</span> <span class="nav-text">ViewController</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#NSObject-NCKVO-头部拓展可忽略"><span class="nav-number">3.2.</span> <span class="nav-text">NSObject+NCKVO (头部拓展可忽略)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#NCperson"><span class="nav-number">3.3.</span> <span class="nav-text">NCperson</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Dog"><span class="nav-number">3.4.</span> <span class="nav-text">Dog</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2015 &mdash; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+
+  
+</div>
+
+
+ <!-- <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v</div>
+-->
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v="></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v="></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v="></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v="></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v="></script>
+<script type="text/javascript" src="/js/src/post-details.js?v="></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v="></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
