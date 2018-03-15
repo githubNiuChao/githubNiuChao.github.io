@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-minimal.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="RunLoop," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="RunLoopRunloop，顾名思义就是跑圈，他的本质就是一个do，while循环，当有事做时就做事，没事做时就休眠。至于怎么做事，怎么休眠,这个是由系统内核来调度。  首先我们要明确一个概念，线程一般都是一次执行完毕任务，就销毁了。而在线程中添加了runloop，并运行起来，实际上是添加了一个do，while循环，这样这个线程的程序就一直卡在do，while循环上，这样相当于线程的任务一直没">
+<meta name="keywords" content="RunLoop">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RunLoop线程">
+<meta property="og:url" content="http://www.niu-chao.top/2017/04/19/RunLoop线程/index.html">
+<meta property="og:site_name" content="一头驮砖的牛">
+<meta property="og:description" content="RunLoopRunloop，顾名思义就是跑圈，他的本质就是一个do，while循环，当有事做时就做事，没事做时就休眠。至于怎么做事，怎么休眠,这个是由系统内核来调度。  首先我们要明确一个概念，线程一般都是一次执行完毕任务，就销毁了。而在线程中添加了runloop，并运行起来，实际上是添加了一个do，while循环，这样这个线程的程序就一直卡在do，while循环上，这样相当于线程的任务一直没">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-03-15T12:49:49.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="RunLoop线程">
+<meta name="twitter:description" content="RunLoopRunloop，顾名思义就是跑圈，他的本质就是一个do，while循环，当有事做时就做事，没事做时就休眠。至于怎么做事，怎么休眠,这个是由系统内核来调度。  首先我们要明确一个概念，线程一般都是一次执行完毕任务，就销毁了。而在线程中添加了runloop，并运行起来，实际上是添加了一个do，while循环，这样这个线程的程序就一直卡在do，while循环上，这样相当于线程的任务一直没">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '',
+    sidebar: {"position":"right","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.niu-chao.top/2017/04/19/RunLoop线程/"/>
+
+
+
+
+
+  <title>RunLoop线程 | 一头驮砖的牛</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail">
+    <div class="headband"></div>
+
+
+    <a href="https://github.com/githubNiuChao" class="github-corner" aria-label="View source on Github"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+    
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">一头驮砖的牛</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.niu-chao.top/2017/04/19/RunLoop线程/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="一头驮砖的牛">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">RunLoop线程</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-19T10:12:55+08:00">
+                2017-04-19
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <hr>
+<h2 id="RunLoop"><a href="#RunLoop" class="headerlink" title="RunLoop"></a>RunLoop</h2><p><strong>Runloop，顾名思义就是跑圈，他的本质就是一个do，while循环，当有事做时就做事，没事做时就休眠。至于怎么做事，怎么休眠,这个是由系统内核来调度。</strong></p>
+<blockquote>
+<p>首先我们要明确一个概念，线程一般都是一次执行完毕任务，就销毁了。<br>而在线程中添加了runloop，并运行起来，实际上是添加了一个do，while循环，这样这个线程的程序就一直卡在do，while循环上，这样相当于线程的任务一直没有执行完，所有线程一直不会销毁。<br>所有，一旦我们添加了一个runloop，并run了，我们如果要销毁这个线程，必须停止runloop，至于停止的方式，我们接着往下看。</p>
+</blockquote>
+<h2 id="主线程的RunLoop"><a href="#主线程的RunLoop" class="headerlink" title="主线程的RunLoop"></a>主线程的RunLoop</h2><h3 id="main-m"><a href="#main-m" class="headerlink" title="main.m"></a>main.m</h3><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">    <span class="comment">/*拓展*</span></span><br><span class="line"><span class="comment"> 循环与递归 区别????  方法的调用就是函数的调用,函数调用本质: 分配一块栈区域!!递归就是自己调用自己,反复的调用就会反复的分配空间,所有造成堆栈溢出;</span></span><br><span class="line"><span class="comment"> 汇编语言中会提到为什么递归即函数的反复调用会反复开辟栈空间,而死循环不会反复开辟空间.</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;UIKit/UIKit.h&gt;</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">"AppDelegate.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> main(<span class="keyword">int</span> argc, <span class="keyword">char</span> * argv[]) &#123;</span><br><span class="line">    <span class="keyword">@autoreleasepool</span> &#123;</span><br><span class="line"><span class="comment">//        NSLog(@"来了");</span></span><br><span class="line">        <span class="comment">/*UIApplicationMain为我们创建了一个:主循环Runloop,默认开启</span></span><br><span class="line"><span class="comment">         1.保证程序不退出;</span></span><br><span class="line"><span class="comment">         2.监听事件,触摸事件,时钟,网络事件;</span></span><br><span class="line"><span class="comment">         3.如果没有时间发生,就会进入休眠状态,性能损耗低;</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">         <span class="keyword">int</span> main = <span class="built_in">UIApplicationMain</span>(argc, argv, <span class="literal">nil</span>, <span class="built_in">NSStringFromClass</span>([AppDelegate <span class="keyword">class</span>]));</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@"走了"</span>);</span><br><span class="line">        <span class="keyword">return</span> main;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="Runloop-初探"><a href="#Runloop-初探" class="headerlink" title="Runloop 初探"></a>Runloop 初探</h2><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"> - (<span class="keyword">void</span>)viewDidLoad &#123;</span><br><span class="line">     [<span class="keyword">super</span> viewDidLoad];</span><br><span class="line"></span><br><span class="line">     <span class="comment">//此方法默认封装到Runloop里面了;</span></span><br><span class="line">     <span class="comment">//***此方法默认加入的是默认模式,所以依然会出现UI操作冲突的问题***</span></span><br><span class="line">     [<span class="built_in">NSTimer</span> scheduledTimerWithTimeInterval:<span class="number">1.0</span> target:<span class="keyword">self</span> selector:<span class="keyword">@selector</span>(timerMethod) userInfo:<span class="literal">nil</span> repeats:<span class="literal">YES</span>];</span><br><span class="line"></span><br><span class="line">     <span class="comment">//此方法默认不加入Runloop,需要手动加入到Runloop循环当中去</span></span><br><span class="line">     <span class="built_in">NSTimer</span> *time = [<span class="built_in">NSTimer</span> timerWithTimeInterval:<span class="number">1.0</span> target:<span class="keyword">self</span> selector:<span class="keyword">@selector</span>(timerMethod) userInfo:<span class="literal">nil</span> repeats:<span class="literal">YES</span>];</span><br><span class="line">     <span class="comment">//[NSRunLoop mainRunLoop];当前就是主Runloop</span></span><br><span class="line"></span><br><span class="line">     <span class="comment">//NSDefaultRunLoopMode 默认模式</span></span><br><span class="line">     <span class="comment">//UITrackingRunLoopMode UI模式</span></span><br><span class="line">     <span class="comment">//NSRunLoopCommonModes  占位模式 原则上讲它不属于Runloop模式</span></span><br><span class="line">     <span class="comment">//    [[NSRunLoop currentRunLoop] addTimer:time forMode:NSDefaultRunLoopMode];//UI操作(触摸)时和timer事件 相互跳动执行</span></span><br><span class="line">     <span class="comment">//    [[NSRunLoop currentRunLoop] addTimer:time forMode:UITrackingRunLoopMode];//只会在有UI操作(触摸)时执行timer事件</span></span><br><span class="line">     [[<span class="built_in">NSRunLoop</span> currentRunLoop] addTimer:time forMode:<span class="built_in">NSRunLoopCommonModes</span>];<span class="comment">//UI操作(触摸)时和timer事件正常执行</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)timerMethod&#123;</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"timerMethod执行 当前线程%@:"</span>,[<span class="built_in">NSThread</span> currentThread]);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="拓展"><a href="#拓展" class="headerlink" title="拓展"></a>拓展</h3><blockquote>
+<p><strong>Runloop始终与线程将关联</strong><br>Runloop有5中模式  每一种模式中都包含  timer —- source  —- observer</p>
+<p>NSDefaultRunLoopMode 默认模式<br>UITrackingRunLoopMode  UI模式–1.用户体验优先级最高 2.只会在有UI操作(触摸)时进行<br>NSRunLoopCommonModes   占位模式 原则上讲它不属于Runloop模式<br>内核模式<br>初始化模式</p>
+<p>当将timer事件设定为,可以理解为添加到 默认模式的事件列表下,并添加到主线程的Runloop中,但是我们知道凡是UI操作的事件都是添加到主线程上的,所以在默认模式下的timer事件会与UI操作事件发生冲突,主线程上的Runloop会在timer事件与UI操作事件上来回跳动Run执行;<br>但是如果将timer事件添加到UI模式下,就会发现它只会在有触摸或者说有UI操作时才会执行.</p>
+</blockquote>
+<h2 id="RunLoop与线程"><a href="#RunLoop与线程" class="headerlink" title="RunLoop与线程"></a>RunLoop与线程</h2><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">ViewController</span> ()</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>,<span class="keyword">strong</span>) NCThread *ncThread;<span class="comment">//demo2为了测试线程是否被释放----设置strong只是保存了_ncThread这个OC对象的生命,线程是由CPU直接调度的,所以它在例子中block任务执行完毕后就会被释放;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) dispatch_source_t timer;</span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">ViewController</span></span></span><br><span class="line"></span><br><span class="line">    - (<span class="keyword">void</span>)viewDidLoad &#123;</span><br><span class="line">     [<span class="keyword">super</span> viewDidLoad];</span><br><span class="line"></span><br><span class="line">     <span class="comment">//子线程</span></span><br><span class="line">     <span class="built_in">NSThread</span> *thread = [[<span class="built_in">NSThread</span> alloc] initWithBlock:^&#123;</span><br><span class="line"></span><br><span class="line">         <span class="built_in">NSTimer</span> *time = [<span class="built_in">NSTimer</span> timerWithTimeInterval:<span class="number">1.0</span> target:<span class="keyword">self</span> selector:<span class="keyword">@selector</span>(timerMethod) userInfo:<span class="literal">nil</span> repeats:<span class="literal">YES</span>];</span><br><span class="line"></span><br><span class="line">         <span class="comment">//注意这里是子线程的Runloop</span></span><br><span class="line">         [[<span class="built_in">NSRunLoop</span> currentRunLoop] addTimer:time forMode:<span class="built_in">NSRunLoopCommonModes</span>];<span class="comment">//UI操作(触摸)时和timer事件正常执行</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">         <span class="comment">//        while (true) &#123;</span></span><br><span class="line">         <span class="comment">//什么事情都不做,这里只是让线程有执行不完的任务,进而保住线程不被释放;</span></span><br><span class="line">         <span class="comment">//----虽然线程保住了,但是timerMethod事件却未处理是为什么呢?????  想一想这里是不是子线程!!!;</span></span><br><span class="line">         <span class="comment">//        &#125;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">         <span class="comment">//Runloop ----子线程的Runloop默认是不会开启的,这就解释了为什么线程保住了却未执行timerMethod方法!!!! 看拓展②</span></span><br><span class="line">         <span class="comment">//currentRunLoop会调用底层的CFRunloop,在这里只有此currentRunLoop()调用时才回去创建一个Runloop,是个懒加载过程!!!</span></span><br><span class="line">         [[<span class="built_in">NSRunLoop</span> currentRunLoop] run];<span class="comment">//run起来死循环任务,不会执行下面的代码</span></span><br><span class="line"></span><br><span class="line">         <span class="comment">//现在考虑一下Runloop如何被停止呢???? 好,尝试在timerMethod方法中将线程退出,线程一但退出那是不是Runloop也就被退出了!!!</span></span><br><span class="line"></span><br><span class="line">         <span class="built_in">NSLog</span>(<span class="string">@"线程来了"</span>);<span class="comment">//当run起来后timerMethod虽然执行了,但是这里不会打印执行,因为上面的Runloop是死循环,类似于UIApplicationMain的下面不会执行一样;</span></span><br><span class="line">     &#125;];</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">     <span class="comment">//这个方法是在主线程上执行的,不会等待block,所以对于Thread的释放是没有关系的.</span></span><br><span class="line">     [thread start];</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"> <span class="comment">//1.当子线程thread为局部变量时此方法不会执行,因为被释放了;</span></span><br><span class="line"> <span class="comment">//2.但是当子线程为_ncThread全局变量时也不会执行, 为什么呢?????  ----strong只是保存了_ncThread这个OC对象的生命,线程是由CPU直接调度的,所以它在例子中block任务执行完毕后就会被释放;</span></span><br><span class="line"></span><br><span class="line"> - (<span class="keyword">void</span>)timerMethod&#123;</span><br><span class="line">     <span class="built_in">NSLog</span>(<span class="string">@"timerMethod执行 当前线程%@:"</span>,[<span class="built_in">NSThread</span> currentThread]);<span class="comment">//不会执行 看拓展①</span></span><br><span class="line"></span><br><span class="line">     <span class="comment">//暴力干掉子线程!!!!对应上面的Runloop退出.</span></span><br><span class="line">     [<span class="built_in">NSThread</span> exit];</span><br><span class="line"></span><br><span class="line">     [<span class="built_in">NSThread</span> sleepForTimeInterval:<span class="number">1.0</span>];<span class="comment">//模拟耗时操作,从而引进子线程概念</span></span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"> -(<span class="keyword">void</span>)touchesBegan:(<span class="built_in">NSSet</span>&lt;<span class="built_in">UITouch</span> *&gt; *)touches withEvent:(<span class="built_in">UIEvent</span> *)event&#123;</span><br><span class="line"></span><br><span class="line">     [<span class="built_in">NSThread</span> exit];<span class="comment">//暴力干掉主线程会出现什么情况呢???</span></span><br><span class="line"></span><br><span class="line">     <span class="comment">//答案是主线程被杀死了,例子中的拖动等主线程UI操作不会执行了, 这是为什么呢???主线程都能被干掉?太不可思议了!!! 看拓展③</span></span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">"NCThread.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">NCThread</span></span></span><br><span class="line"></span><br><span class="line">-(<span class="keyword">void</span>)dealloc&#123;</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"线程释放!!!"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<h3 id="拓展-1"><a href="#拓展-1" class="headerlink" title="拓展"></a>拓展</h3><blockquote>
+<p>①线程的生命,只能通过线程的任务去保住,无任务就会被释放!!!  —-让线程有执行不完的任务(Runloop 死循环任务),线程就不会释放了!!!!  —-所以它在例子中block任务执行完毕后就会被释放;</p>
+<p>②主线程的Runloop是在UIApplicationMain中默认开启<br>新创建的线程默认是不会开启的.</p>
+<p>③主线程对于系统来说也是一个子线程,这么多APP,对于系统来说的就有这么多子线程;—–APP启动的第一条线程<br>主线程进行UI操作,UIKit框架也是线程不安全的,保证线程安全就需要’锁’,但是凡是’锁’都需要消耗性能,就好像属性里面的nonatomic也是避免消耗性能的,所以苹果规定 “凡是UI操作统一放在—-主线程”,当然可以尝试一下放在子线程,如果出现资源抢夺,会出现未知的问题.</p>
+</blockquote>
+<h2 id="RunLoop与线程之间的通信"><a href="#RunLoop与线程之间的通信" class="headerlink" title="RunLoop与线程之间的通信"></a>RunLoop与线程之间的通信</h2><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"> - (<span class="keyword">void</span>)viewDidLoad &#123;</span><br><span class="line">    [<span class="keyword">super</span> viewDidLoad];</span><br><span class="line"></span><br><span class="line">    <span class="comment">//子线程</span></span><br><span class="line">    <span class="built_in">NSThread</span> *thread = [[<span class="built_in">NSThread</span> alloc] initWithBlock:^&#123;</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@"子线程进来 :%@"</span>,[<span class="built_in">NSThread</span> currentThread]);</span><br><span class="line">        <span class="keyword">while</span> (<span class="literal">true</span>) &#123;</span><br><span class="line">        <span class="comment">//            ***Runloop启动线程间的通信***</span></span><br><span class="line">        [[<span class="built_in">NSRunLoop</span> currentRunLoop] runUntilDate:[<span class="built_in">NSDate</span> dateWithTimeIntervalSinceNow:<span class="number">0.0001</span>]];</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;];</span><br><span class="line"></span><br><span class="line">    [thread start];</span><br><span class="line"></span><br><span class="line">    <span class="comment">//线程间的通信----在主线程上为子线程添加了一个任务;</span></span><br><span class="line">    <span class="comment">//但是子线程为启动Runloop,所以otherMethod不会执行,不管它是不是在start之前还是之后;</span></span><br><span class="line">    <span class="comment">//这个方法实际上是将放在Runloop事件队列里面,所以单纯加一个while死循环也不能执行,需要通过Runloop去启动线程之间的通信</span></span><br><span class="line">    [<span class="keyword">self</span> performSelector:<span class="keyword">@selector</span>(otherMethod) onThread:thread withObject:<span class="literal">nil</span> waitUntilDone:<span class="literal">NO</span>];</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">-(<span class="keyword">void</span>)otherMethod&#123;</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"otherMethod%@"</span>,[<span class="built_in">NSThread</span> currentThread]);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="Runloop与GCD"><a href="#Runloop与GCD" class="headerlink" title="Runloop与GCD"></a>Runloop与GCD</h2><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">ViewController</span> ()</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>,<span class="keyword">strong</span>) NCThread *ncThread;<span class="comment">//demo2为了测试线程是否被释放----设置strong只是保存了_ncThread这个OC对象的生命,线程是由CPU直接调度的,所以它在例子中block任务执行完毕后就会被释放;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) dispatch_source_t timer;</span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">ViewController</span></span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)viewDidLoad &#123;</span><br><span class="line">    [<span class="keyword">super</span> viewDidLoad];</span><br><span class="line"></span><br><span class="line"><span class="comment">//    GCD与Runloop有紧密的联系</span></span><br><span class="line"><span class="comment">//    **** 用GCD创建的timer,运行后发现与UI操作完美运行,没有冲突,说明GCD把我们封装好了Runloop, 底层就CFRunloop*****</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建timer 并把它放在全局队列里面</span></span><br><span class="line">    _timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, <span class="number">0</span>, <span class="number">0</span>, dispatch_get_global_queue(<span class="number">0</span>, <span class="number">0</span>));</span><br><span class="line">    <span class="comment">//设置timer</span></span><br><span class="line">    dispatch_source_set_timer(_timer, DISPATCH_TIME_NOW, <span class="number">1.0</span> * <span class="built_in">NSEC_PER_SEC</span>,<span class="number">0</span>);</span><br><span class="line">    <span class="comment">//创建句柄 回调</span></span><br><span class="line">    dispatch_source_set_event_handler(_timer, ^&#123;</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@"------线程:%@"</span>,[<span class="built_in">NSThread</span>  currentThread]);</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="comment">//启动timer</span></span><br><span class="line">    dispatch_resume(_timer);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">// GCD timer创建代码块</span></span><br><span class="line">    <span class="comment">//    dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, &lt;#dispatchQueue#&gt;);</span></span><br><span class="line">    <span class="comment">//    dispatch_source_set_timer(timer, DISPATCH_TIME_NOW, &lt;#intervalInSeconds#&gt; * NSEC_PER_SEC, &lt;#leewayInSeconds#&gt; * NSEC_PER_SEC);</span></span><br><span class="line">    <span class="comment">//    dispatch_source_set_event_handler(timer, ^&#123;</span></span><br><span class="line">    <span class="comment">//        &lt;#code to be executed when timer fires#&gt;</span></span><br><span class="line">    <span class="comment">//    &#125;);</span></span><br><span class="line">    <span class="comment">//    dispatch_resume(timer);</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//打开方法断点,点击屏幕可以查看函数调用栈(如何查看调用栈呢----在lldb模式下输入:thread backtrace ),可以看到CFRunLoopDoSource0,根据拓展我们知道Source0不是内核事件,对啊,因为他是咱们点击出来的,用户事件嘛!!! 拓展①</span></span><br><span class="line">-(<span class="keyword">void</span>)touchesBegan:(<span class="built_in">NSSet</span>&lt;<span class="built_in">UITouch</span> *&gt; *)touches withEvent:(<span class="built_in">UIEvent</span> *)event&#123;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="拓展-2"><a href="#拓展-2" class="headerlink" title="拓展"></a>拓展</h3><blockquote>
+<p>①  通过GCD代码我们引入了Source这个概念,是不是很眼熟,没错在每个Runloop都包含三个部分: Timer, Source ,Observe;(可以去CFRunloop源码里查看为什么包含这三部分)</p>
+<p>Source—事件源(输入源) 对应的是—CFRunloopSourceRef,凡是看到” Ref” 这个字的时候就代表他是一个结构体指针;</p>
+<p>按照函数调动栈解释:Source分为两个部分;<br>Source0:不是Source1就是Source0<br>Source1:内核与其他线程的通讯事件</p>
+</blockquote>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/RunLoop/" rel="tag"># RunLoop</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/03/18/浅析KVO原理以及自己完成简单的KVO分类/" rel="next" title="浅析KVO原理以及自己完成简单的KVO代码实现">
+                <i class="fa fa-chevron-left"></i> 浅析KVO原理以及自己完成简单的KVO代码实现
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/04/21/CFRunLoop应用/" rel="prev" title="CFRunLoop应用">
+                CFRunLoop应用 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/avatar.jpg"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description">关注 Ios | Python 开发</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#RunLoop"><span class="nav-number">1.</span> <span class="nav-text">RunLoop</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#主线程的RunLoop"><span class="nav-number">2.</span> <span class="nav-text">主线程的RunLoop</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#main-m"><span class="nav-number">2.1.</span> <span class="nav-text">main.m</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Runloop-初探"><span class="nav-number">3.</span> <span class="nav-text">Runloop 初探</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#拓展"><span class="nav-number">3.1.</span> <span class="nav-text">拓展</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RunLoop与线程"><span class="nav-number">4.</span> <span class="nav-text">RunLoop与线程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#拓展-1"><span class="nav-number">4.1.</span> <span class="nav-text">拓展</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RunLoop与线程之间的通信"><span class="nav-number">5.</span> <span class="nav-text">RunLoop与线程之间的通信</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Runloop与GCD"><span class="nav-number">6.</span> <span class="nav-text">Runloop与GCD</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#拓展-2"><span class="nav-number">6.1.</span> <span class="nav-text">拓展</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2015 &mdash; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+
+  
+</div>
+
+
+ <!-- <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v</div>
+-->
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v="></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v="></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v="></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v="></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v="></script>
+<script type="text/javascript" src="/js/src/post-details.js?v="></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v="></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
