@@ -94,7 +94,7 @@
 <meta property="og:site_name" content="一头驮砖的牛">
 <meta property="og:description" content="runtime 是 OC底层的一套C语言的API（引入 &amp;lt;objc/runtime.h&amp;gt; 或&amp;lt;objc/message.h&amp;gt;），编译器最终都会将OC代码转化为运行时代码，通过终端命令编译.m 文件： clang -rewrite-objc xxx.m  可以看到编译后的xxx.cpp（C++文件）。 比如我们创建了一个对象 [[NSObject alloc]init]，">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2018-03-13T12:17:30.000Z">
+<meta property="og:updated_time" content="2018-03-20T08:21:43.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="利用Runtime解决NSArray越界等问题">
 <meta name="twitter:description" content="runtime 是 OC底层的一套C语言的API（引入 &amp;lt;objc/runtime.h&amp;gt; 或&amp;lt;objc/message.h&amp;gt;），编译器最终都会将OC代码转化为运行时代码，通过终端命令编译.m 文件： clang -rewrite-objc xxx.m  可以看到编译后的xxx.cpp（C++文件）。 比如我们创建了一个对象 [[NSObject alloc]init]，">
@@ -107,7 +107,7 @@
     root: '/',
     scheme: 'Pisces',
     version: '',
-    sidebar: {"position":"right","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
     fancybox: true,
     tabs: true,
     motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
@@ -152,7 +152,7 @@
     
   
 
-  <div class="container sidebar-position-right page-post-detail">
+  <div class="container sidebar-position-left page-post-detail">
     <div class="headband"></div>
 
 
@@ -374,6 +374,15 @@
 <p><strong><code>_cmd</code>在Objective-C的方法中表示当前方法的selector，正如同self表示当前方法调用的对象实例.
 </strong>这里强调当前，<code>_cmd</code>的作用域只在当前方法里，直指当前方法名@selector。**</p>
 </blockquote>
+<h2 id="Runtime-动态添加方法"><a href="#Runtime-动态添加方法" class="headerlink" title="Runtime 动态添加方法"></a>Runtime 动态添加方法</h2><blockquote>
+<p>OC的方法有哪几部分组成,在我的博客中反复强调的.<br> SEL:方法编号<br> IMP:方法实现 (指向一个函数的指针)</p>
+</blockquote>
+<p> Class 源码可以查看objc_method_list方法定义的链表 本质是一个有 objc_method元素的可变长度的数组。一个 objc_method 结构体中有SEL，表示函数类型的字符串以及函数的实现IMP</p>
+<p> objc_method_list就好比一本书,SEL是标题,IMP是页码,真正的内容就是IMP指针指向的区域;</p>
+<p> struct objc_class {<br> Class _Nonnull isa  OBJC_ISA_AVAILABILITY;</p>
+<p> #if !<strong>OBJC2</strong><br> Class _Nullable super_class                              OBJC2_UNAVAILABLE;<br> const char <em> _Nonnull name                               OBJC2_UNAVAILABLE;<br> long version                                             OBJC2_UNAVAILABLE;<br> long info                                                OBJC2_UNAVAILABLE;<br> long instance_size                                       OBJC2_UNAVAILABLE;<br> struct objc_ivar_list </em> _Nullable ivars                  OBJC2_UNAVAILABLE;                            //该类的成员变量链表<br> struct objc_method_list <em> _Nullable </em> _Nullable methodLists                    OBJC2_UNAVAILABLE;      //方法定义的链表<br> struct objc_cache <em> _Nonnull cache                       OBJC2_UNAVAILABLE;<br> struct objc_protocol_list </em> _Nullable protocols          OBJC2_UNAVAILABLE;</p>
+<p> #endif</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;Foundation/Foundation.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">Person</span> : <span class="title">NSObject</span></span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)eatWith:(<span class="built_in">NSString</span> *)food;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">Person</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//记住:这个是动态添加一个类方法</span></span><br><span class="line">+ (<span class="built_in">BOOL</span>)resolveClassMethod:(SEL)sel&#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//    动态添加eat方法,IMP再有参数的情况下需要强转(IMP)</span></span><br><span class="line">    class_addMethod(<span class="keyword">self</span>, sel, (IMP)eat, <span class="string">"v@:@"</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> [<span class="keyword">super</span> resolveClassMethod:sel];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//记住:这个是动态添加一个实例方法</span></span><br><span class="line">+ (<span class="built_in">BOOL</span>)resolveInstanceMethod:(SEL)sel&#123;</span><br><span class="line">    <span class="comment">//    动态添加eat方法,IMP再有参数的情况下需要强转(IMP)</span></span><br><span class="line">    class_addMethod(<span class="keyword">self</span>, sel, (IMP)eat, <span class="string">"v@:@"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> [<span class="keyword">super</span> resolveInstanceMethod:sel];</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">////OC中方法的调用里面有两个隐藏的参数！！！ 1、id self  2、SEL _cmd</span></span><br><span class="line"><span class="comment">//***要想获得第三个参数的值必须在参数列表中补齐 id self,SEL _cmd</span></span><br><span class="line"><span class="keyword">void</span> eat(<span class="keyword">id</span> <span class="keyword">self</span>,SEL _cmd, <span class="built_in">NSString</span> *food)&#123;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"我今天吃了%@,倍儿开心!!!"</span>,food);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">"ViewController.h"</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">"Person.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">ViewController</span> ()</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">ViewController</span></span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)viewDidLoad &#123;</span><br><span class="line">    [<span class="keyword">super</span> viewDidLoad];</span><br><span class="line"></span><br><span class="line">    Person *p = [[Person alloc] init];</span><br><span class="line">    [p eatWith:<span class="string">@"火烧"</span>];</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
       
     </div>
@@ -414,7 +423,7 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2017/03/18/浅析KVO原理以及自己完成简单的KVO分类/" rel="prev" title="浅析KVO原理以及自己完成简单的KVO代码实现">
+              <a href="/2017/03/18/浅析KVO原理以及自己完成简单的KVO代码实现/" rel="prev" title="浅析KVO原理以及自己完成简单的KVO代码实现">
                 浅析KVO原理以及自己完成简单的KVO代码实现 <i class="fa fa-chevron-right"></i>
               </a>
             
@@ -487,7 +496,7 @@
                 alt="" />
             
               <p class="site-author-name" itemprop="name"></p>
-              <p class="site-description motion-element" itemprop="description">关注 Ios | Python 开发</p>
+              <p class="site-description motion-element" itemprop="description">------ IOS | Python ------</p>
           </div>
 
           <nav class="site-state motion-element">
@@ -497,7 +506,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-count">8</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -543,7 +552,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#利用Runtime解决NSArray和NSMutableArray数组越界的crash问题"><span class="nav-number">1.</span> <span class="nav-text">利用Runtime解决NSArray和NSMutableArray数组越界的crash问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#h文件"><span class="nav-number">1.1.</span> <span class="nav-text">.h文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#m文件"><span class="nav-number">1.2.</span> <span class="nav-text">.m文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#解析"><span class="nav-number">1.3.</span> <span class="nav-text">解析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#利用Runtime设置字体方法-方法替换的另一种写法—-严谨的写法"><span class="nav-number">2.</span> <span class="nav-text">利用Runtime设置字体方法(方法替换的另一种写法—-严谨的写法)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#h文件-1"><span class="nav-number">2.1.</span> <span class="nav-text">.h文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#m文件-1"><span class="nav-number">2.2.</span> <span class="nav-text">.m文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#说明"><span class="nav-number">2.3.</span> <span class="nav-text">说明:</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Runtime运行时添加属性，或者block属性"><span class="nav-number">3.</span> <span class="nav-text">Runtime运行时添加属性，或者block属性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#知识点"><span class="nav-number">3.1.</span> <span class="nav-text">知识点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#h"><span class="nav-number">3.2.</span> <span class="nav-text">.h</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#m"><span class="nav-number">3.3.</span> <span class="nav-text">.m</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#利用Runtime解决NSArray和NSMutableArray数组越界的crash问题"><span class="nav-number">1.</span> <span class="nav-text">利用Runtime解决NSArray和NSMutableArray数组越界的crash问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#h文件"><span class="nav-number">1.1.</span> <span class="nav-text">.h文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#m文件"><span class="nav-number">1.2.</span> <span class="nav-text">.m文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#解析"><span class="nav-number">1.3.</span> <span class="nav-text">解析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#利用Runtime设置字体方法-方法替换的另一种写法—-严谨的写法"><span class="nav-number">2.</span> <span class="nav-text">利用Runtime设置字体方法(方法替换的另一种写法—-严谨的写法)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#h文件-1"><span class="nav-number">2.1.</span> <span class="nav-text">.h文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#m文件-1"><span class="nav-number">2.2.</span> <span class="nav-text">.m文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#说明"><span class="nav-number">2.3.</span> <span class="nav-text">说明:</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Runtime运行时添加属性，或者block属性"><span class="nav-number">3.</span> <span class="nav-text">Runtime运行时添加属性，或者block属性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#知识点"><span class="nav-number">3.1.</span> <span class="nav-text">知识点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#h"><span class="nav-number">3.2.</span> <span class="nav-text">.h</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#m"><span class="nav-number">3.3.</span> <span class="nav-text">.m</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Runtime-动态添加方法"><span class="nav-number">4.</span> <span class="nav-text">Runtime 动态添加方法</span></a></li></ol></div>
             
 
           </div>
@@ -629,8 +638,6 @@
   
 
 
-  
-
 
 
 
@@ -669,11 +676,6 @@
   
   
     <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
   
 
 
