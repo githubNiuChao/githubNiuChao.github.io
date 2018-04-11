@@ -94,7 +94,7 @@
 <meta property="og:site_name" content="一头驮砖的牛">
 <meta property="og:description" content="同步-异步  串行-并行同步异步、并行串行的区分同步异步：是指任务添加到线程上这个过程的同步和异步串行并行：是指任务在线程上运行的串行和并行  使用block，invocation或者是dispatch_function_t(C函数)添加任务，任务中都是需要执行return返回的，同步异步就是指是否和这个return同步，如果是同步添加到线程上的任务，把任务添加到线程上的添加操作本身会等到任务中">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2018-03-30T10:52:06.000Z">
+<meta property="og:updated_time" content="2018-04-10T13:13:54.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="GCD队列与同&#x2F;异步执行 &amp; NSOperationQueue">
 <meta name="twitter:description" content="同步-异步  串行-并行同步异步、并行串行的区分同步异步：是指任务添加到线程上这个过程的同步和异步串行并行：是指任务在线程上运行的串行和并行  使用block，invocation或者是dispatch_function_t(C函数)添加任务，任务中都是需要执行return返回的，同步异步就是指是否和这个return同步，如果是同步添加到线程上的任务，把任务添加到线程上的添加操作本身会等到任务中">
@@ -374,6 +374,9 @@
 <p>保证函数在整个生命周期内只会执行一次，看代码:</p>
 </blockquote>
 <figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">-(<span class="keyword">void</span>)touchesBegan:(<span class="built_in">NSSet</span>&lt;<span class="built_in">UITouch</span> *&gt; *)touches withEvent:(<span class="built_in">UIEvent</span> *)event&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="built_in">dispatch_once_t</span> onceToken;</span><br><span class="line">    <span class="built_in">dispatch_once</span>(&amp;onceToken, ^&#123;</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@"无论如何点击只执行一次once:%@"</span>,[<span class="built_in">NSThread</span> currentThread]);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">打印结果:</span><br><span class="line">[<span class="number">1524</span>:<span class="number">509261</span>]无论如何点击只执行一次once: &lt;<span class="built_in">NSThread</span>: <span class="number">0x600000262940</span>&gt;&#123;number = <span class="number">1</span>, name = main&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>这里的dispatch_once_t必须是静态的。也就是要有APP一样长的生存期来保证这段时间内task只被执行一次。如果不是static的，那么只被执行一次是保证不了的。<br>dispatch_once方法在这里执行，onceToken在这里有一个取地址的操作。也就是onceToken把地址传入方法内部被初始化和赋值。</p>
+</blockquote>
 <h3 id="dispatch-group-async-amp-dispatch-group-notify"><a href="#dispatch-group-async-amp-dispatch-group-notify" class="headerlink" title="dispatch_group_async &amp; dispatch_group_notify"></a>dispatch_group_async &amp; dispatch_group_notify</h3><blockquote>
 <p>GCD有一个神器的东西叫做队列组，当加入到队列组中的所有任务执行完成之后，会调用<code>dispatch_group_notify</code>函数通知任务全部完成，代码如下：</p>
 </blockquote>
@@ -477,8 +480,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2017/03/18/浅析KVO原理以及自己完成简单的KVO代码实现/" rel="prev" title="浅析KVO原理以及自己完成简单的KVO代码实现">
-                浅析KVO原理以及自己完成简单的KVO代码实现 <i class="fa fa-chevron-right"></i>
+              <a href="/2016/12/21/GCD队列相关/" rel="prev" title="GCD队列相关">
+                GCD队列相关 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -560,7 +563,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-count">13</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>

@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-minimal.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="IOS," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="YYAsyncLayerYYAsyncLayer：继承自CALayer，绘制、创建绘制线程的部分都在这个类。YYTransaction：用于创建RunloopObserver监听MainRunloop的空闲时间，并将YYTranaction对象存放到集合中。YYSentinel：提供获取当前值的value（只读）属性，以及- (int32_t)increase自增加的方法返回一个新的value值">
+<meta name="keywords" content="IOS">
+<meta property="og:type" content="article">
+<meta property="og:title" content="YYAsyncLayer源码&amp;OSAtomic原子操作">
+<meta property="og:url" content="http://www.niu-chao.top/2017/04/25/YYAsyncLayer源码&OSAtomic原子操作/index.html">
+<meta property="og:site_name" content="一头驮砖的牛">
+<meta property="og:description" content="YYAsyncLayerYYAsyncLayer：继承自CALayer，绘制、创建绘制线程的部分都在这个类。YYTransaction：用于创建RunloopObserver监听MainRunloop的空闲时间，并将YYTranaction对象存放到集合中。YYSentinel：提供获取当前值的value（只读）属性，以及- (int32_t)increase自增加的方法返回一个新的value值">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1121012-86524da67fb8b094.png?imageMogr2/auto-orient/"YYAsyncLayer"">
+<meta property="og:updated_time" content="2018-04-11T09:44:38.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="YYAsyncLayer源码&amp;OSAtomic原子操作">
+<meta name="twitter:description" content="YYAsyncLayerYYAsyncLayer：继承自CALayer，绘制、创建绘制线程的部分都在这个类。YYTransaction：用于创建RunloopObserver监听MainRunloop的空闲时间，并将YYTranaction对象存放到集合中。YYSentinel：提供获取当前值的value（只读）属性，以及- (int32_t)increase自增加的方法返回一个新的value值">
+<meta name="twitter:image" content="https://upload-images.jianshu.io/upload_images/1121012-86524da67fb8b094.png?imageMogr2/auto-orient/"YYAsyncLayer"">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.niu-chao.top/2017/04/25/YYAsyncLayer源码&OSAtomic原子操作/"/>
+
+
+
+
+
+  <title>YYAsyncLayer源码&OSAtomic原子操作 | 一头驮砖的牛</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+
+    <a href="https://github.com/githubNiuChao" class="github-corner" aria-label="View source on Github"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+    
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">一头驮砖的牛</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.niu-chao.top/2017/04/25/YYAsyncLayer源码&OSAtomic原子操作/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="一头驮砖的牛">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">YYAsyncLayer源码&OSAtomic原子操作</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-25T16:43:18+08:00">
+                2017-04-25
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <hr>
+<h2 id="YYAsyncLayer"><a href="#YYAsyncLayer" class="headerlink" title="YYAsyncLayer"></a>YYAsyncLayer</h2><p><strong>YYAsyncLayer：</strong>继承自CALayer，绘制、创建绘制线程的部分都在这个类。<br><strong>YYTransaction：</strong>用于创建RunloopObserver监听MainRunloop的空闲时间，并将YYTranaction对象存放到集合中。<br><strong>YYSentinel：</strong>提供获取当前值的value（只读）属性，以及- (int32_t)increase自增加的方法返回一个新的value值，用于判断异步绘制任务是否被取消的工具。</p>
+<p>通过下图我们来大概了解一下：<br><img src="https://upload-images.jianshu.io/upload_images/1121012-86524da67fb8b094.png?imageMogr2/auto-orient/&quot;YYAsyncLayer&quot;" alt="Alt YYAsyncLayer"></p>
+<blockquote>
+<p>图是整体异步绘制的实现思路，后面一步步说明。现在假设需要绘制Label，其实是继承自UIView，重写<code>+ (Class)layerClass</code> ，在需要重新绘制的地方调用下面方法，比如<code>setter</code>，<code>layoutSubviews</code>。</p>
+</blockquote>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">"NCLabel.h"</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">"YYAsyncLayer.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">NCLabel</span> ()</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">copy</span>) <span class="built_in">NSString</span> *text;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">NCLabel</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//默认值是[CALayer class], 在为视图创建底层时使用。</span></span><br><span class="line">+ (Class)layerClass&#123;</span><br><span class="line">    <span class="keyword">return</span>  YYAsyncLayer.class;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)setText:(<span class="built_in">NSString</span> *)text &#123;</span><br><span class="line">    _text = text.copy;</span><br><span class="line">    [[YYTransaction transactionWithTarget:<span class="keyword">self</span> selector:<span class="keyword">@selector</span>(contentsNeedUpdated)] commit];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)layoutSubviews&#123;</span><br><span class="line">    [<span class="keyword">super</span> layoutSubviews];</span><br><span class="line">    YYTransaction * transaction = [YYTransaction transactionWithTarget:<span class="keyword">self</span> selector:<span class="keyword">@selector</span>(contentsNeedUpdated)];</span><br><span class="line">    [transaction commit];</span><br><span class="line">&#125;</span><br><span class="line">- (<span class="keyword">void</span>)contentsNeedUpdated&#123;</span><br><span class="line">    <span class="comment">// do update</span></span><br><span class="line">    [<span class="keyword">self</span>.layer setNeedsDisplay];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<h2 id="YYTransaction"><a href="#YYTransaction" class="headerlink" title="YYTransaction"></a>YYTransaction</h2><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">.h</span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;Foundation/Foundation.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="built_in">NS_ASSUME_NONNULL_BEGIN</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> YYTransaction的逻辑也并不复杂：将target和相应selector存入一个set中（重写hash与isEqual用于set判断），并且在runloop中注册kCFRunLoopBeforeWaiting与kCFRunLoopExit事件，将优先级定义为0，即在Core Animation执行完毕后，执行相应的display方法，去模拟Core Animation的绘制机制，进行相应异步绘制的方法。</span></span><br><span class="line"><span class="comment"> YYTransaction.h声明</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">YYTransaction</span> : <span class="title">NSObject</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> 创建和返回一个transaction通过一个定义的target和selector</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> @param target   执行target，target会在runloop结束前被retain</span></span><br><span class="line"><span class="comment"> @param selector target的selector</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> @return 1个新的transaction，或者有错误时返回nil</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">+ (YYTransaction *)transactionWithTarget:(<span class="keyword">id</span>)target selector:(SEL)selector;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  加入transaction到runloop</span></span><br><span class="line"><span class="comment"> </span></span><br><span class="line"><span class="comment"> @discussion It will perform the selector on the target once before main runloop's</span></span><br><span class="line"><span class="comment"> current loop sleep. If the same transaction (same target and same selector) has </span></span><br><span class="line"><span class="comment"> already commit to runloop in this loop, this method do nothing.</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> 讨论它将在主循环前执行目标选择器</span></span><br><span class="line"><span class="comment"> 当前循环睡眠。 如果同一个事务（相同的目标和相同的选择器）具有</span></span><br><span class="line"><span class="comment"> 已经在这个循环中提交了runloop，这个方法什么也不做。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">- (<span class="keyword">void</span>)commit;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">NS_ASSUME_NONNULL_END</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">.m</span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">"YYTransaction.h"</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">YYTransaction</span>()</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="keyword">id</span> target;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">assign</span>) SEL selector;</span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="built_in">NSMutableSet</span> *transactionSet = <span class="literal">nil</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">//RunloopObserver的回调方法，从transactionSet取出transaction对象执行SEL的方法，分发到每一次Runloop执行，避免一次Runloop执行时间太长。</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> YYRunLoopObserverCallBack(<span class="built_in">CFRunLoopObserverRef</span> observer, <span class="built_in">CFRunLoopActivity</span> activity, <span class="keyword">void</span> *info) &#123;</span><br><span class="line">    <span class="keyword">if</span> (transactionSet.count == <span class="number">0</span>) <span class="keyword">return</span>;</span><br><span class="line">    <span class="built_in">NSSet</span> *currentSet = transactionSet;</span><br><span class="line">    <span class="comment">//获取完上一次需要执行的方法后，将所有方法清空</span></span><br><span class="line">    transactionSet = [<span class="built_in">NSMutableSet</span> new];</span><br><span class="line">    <span class="comment">//遍历set。执行里面的selector</span></span><br><span class="line">    [currentSet enumerateObjectsUsingBlock:^(YYTransaction *transaction, <span class="built_in">BOOL</span> *stop) &#123;</span><br><span class="line"><span class="meta">#pragma clang diagnostic push</span></span><br><span class="line"><span class="meta">#pragma clang diagnostic ignored <span class="meta-string">"-Warc-performSelector-leaks"</span></span></span><br><span class="line">        [transaction.target performSelector:transaction.selector];</span><br><span class="line"><span class="meta">#pragma clang diagnostic pop</span></span><br><span class="line">    &#125;];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//同时在YYTransaction.m中注册一个RunloopObserver，监听MainRunloop在kCFRunLoopCommonModes（包含kCFRunLoopDefaultMode、UITrackingRunLoopMode）下的kCFRunLoopBeforeWaiting和kCFRunLoopExit的状态，也就是说在一次Runloop空闲时去执行更新显示的操作。</span></span><br><span class="line"><span class="comment">//关于kCRunLoop的监听状态我在之后的博客中解释说明</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> YYTransactionSetup() &#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="built_in">dispatch_once_t</span> onceToken;</span><br><span class="line"><span class="comment">//    GCD只执行一次</span></span><br><span class="line">    <span class="built_in">dispatch_once</span>(&amp;onceToken, ^&#123;</span><br><span class="line">        transactionSet = [<span class="built_in">NSMutableSet</span> new];</span><br><span class="line">        <span class="built_in">CFRunLoopRef</span> runloop = <span class="built_in">CFRunLoopGetMain</span>();<span class="comment">//CFRunLoopGetMain方法返回主线程的RunLoop引用。后面用这个引用来添加回调</span></span><br><span class="line">        <span class="built_in">CFRunLoopObserverRef</span> observer;</span><br><span class="line"></span><br><span class="line"><span class="comment">//        注册runloop监听，在等待与退出前进行</span></span><br><span class="line"><span class="comment">//        使用系统内置的c方法创建一个RunLoop的观察者，在创建这个观察者的时候回同时指定回调方法。</span></span><br><span class="line">        observer = <span class="built_in">CFRunLoopObserverCreate</span>(<span class="built_in">CFAllocatorGetDefault</span>(),</span><br><span class="line">                                           kCFRunLoopBeforeWaiting | kCFRunLoopExit,</span><br><span class="line">                                           <span class="literal">true</span>,      <span class="comment">// repeat</span></span><br><span class="line">                                           <span class="number">0xFFFFFF</span>,  <span class="comment">// after CATransaction(2000000)</span></span><br><span class="line">                                           YYRunLoopObserverCallBack, <span class="literal">NULL</span>);</span><br><span class="line">        <span class="comment">//给RunLoop实例添加观察者，之后减少一个观察者的引用。</span></span><br><span class="line">        <span class="built_in">CFRunLoopAddObserver</span>(runloop, observer, kCFRunLoopCommonModes);</span><br><span class="line">        <span class="built_in">CFRelease</span>(observer);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//创建一个RunLoop的观察者的时候，还指定了观察者观察的事件：kCFRunLoopBeforeWaiting | kCFRunLoopExit，在</span></span><br><span class="line"><span class="comment">//RunLoop进入等待或者即将要退出的时候开始执行观察者。指定了观察者是否重复（true）。指定了观察者的优先级：0xFFFFFF，这个优先级比CATransaction优先级为2000000的优先级更低。这是为了确保系统的动画优先执行，之后再执行异步渲染。</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//YYRunLoopObserverCallBack就是观察者收到通知的时候要执行的回调方法。这个方法的声明是这样的：</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//static void YYRunLoopObserverCallBack(CFRunLoopObserverRef observer, CFRunLoopActivity activity, void *info);</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">YYTransaction</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> 创建和返回一个transaction通过一个定义的target和selector</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> @param target   执行target，target会在runloop结束前被retain</span></span><br><span class="line"><span class="comment"> @param selector target的selector</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> @return 1个新的transaction，或者有错误时返回nil</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//YYTransaction有selector、target的属性，selector其实就是contentsNeedUpdated方法，此时并不会立即在后台线程去更新显示，而是将YYTransaction对象本身提交保存在transactionSet的集合中，上图中所示。</span></span><br><span class="line">+ (YYTransaction *)transactionWithTarget:(<span class="keyword">id</span>)target selector:(SEL)selector&#123;</span><br><span class="line">    <span class="keyword">if</span> (!target || !selector) <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    YYTransaction *t = [YYTransaction new];</span><br><span class="line">    t.target = target;</span><br><span class="line">    t.selector = selector;</span><br><span class="line">    <span class="keyword">return</span> t;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)commit &#123;</span><br><span class="line">    <span class="keyword">if</span> (!_target || !_selector) <span class="keyword">return</span>;</span><br><span class="line">    <span class="comment">//初始化runloop监听</span></span><br><span class="line">    YYTransactionSetup();</span><br><span class="line">    <span class="comment">//添加行为到set中</span></span><br><span class="line">    [transactionSet addObject:<span class="keyword">self</span>];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//hash值返回（重写hash与isEqual用于set判断）</span></span><br><span class="line">- (<span class="built_in">NSUInteger</span>)hash &#123;</span><br><span class="line">    <span class="keyword">long</span> v1 = (<span class="keyword">long</span>)((<span class="keyword">void</span> *)_selector);</span><br><span class="line">    <span class="keyword">long</span> v2 = (<span class="keyword">long</span>)_target;</span><br><span class="line">    <span class="keyword">return</span> v1 ^ v2;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//isEqual返回（重写hash与isEqual用于set判断）</span></span><br><span class="line">- (<span class="built_in">BOOL</span>)isEqual:(<span class="keyword">id</span>)object &#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">self</span> == object) <span class="keyword">return</span> <span class="literal">YES</span>;</span><br><span class="line">    <span class="keyword">if</span> (![object isMemberOfClass:<span class="keyword">self</span>.class]) <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    YYTransaction *other = object;</span><br><span class="line">    <span class="keyword">return</span> other.selector == _selector &amp;&amp; other.target == _target;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<h2 id="YYAsyncLayer-1"><a href="#YYAsyncLayer-1" class="headerlink" title="YYAsyncLayer"></a>YYAsyncLayer</h2><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br><span class="line">294</span><br><span class="line">295</span><br><span class="line">296</span><br><span class="line">297</span><br><span class="line">298</span><br><span class="line">299</span><br><span class="line">300</span><br><span class="line">301</span><br><span class="line">302</span><br><span class="line">303</span><br><span class="line">304</span><br><span class="line">305</span><br><span class="line">306</span><br><span class="line">307</span><br><span class="line">308</span><br><span class="line">309</span><br><span class="line">310</span><br><span class="line">311</span><br><span class="line">312</span><br><span class="line">313</span><br><span class="line">314</span><br><span class="line">315</span><br><span class="line">316</span><br><span class="line">317</span><br><span class="line">318</span><br><span class="line">319</span><br><span class="line">320</span><br><span class="line">321</span><br><span class="line">322</span><br><span class="line">323</span><br><span class="line">324</span><br><span class="line">325</span><br><span class="line">326</span><br><span class="line">327</span><br><span class="line">328</span><br><span class="line">329</span><br><span class="line">330</span><br><span class="line">331</span><br><span class="line">332</span><br><span class="line">333</span><br><span class="line">334</span><br><span class="line">335</span><br><span class="line">336</span><br><span class="line">337</span><br><span class="line">338</span><br><span class="line">339</span><br><span class="line">340</span><br></pre></td><td class="code"><pre><span class="line">.h</span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;UIKit/UIKit.h&gt;</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;QuartzCore/QuartzCore.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#if __has_include(<span class="meta-string">&lt;YYAsyncLayer/YYAsyncLayer.h&gt;</span>)</span></span><br><span class="line">FOUNDATION_EXPORT <span class="keyword">double</span> YYAsyncLayerVersionNumber;</span><br><span class="line">FOUNDATION_EXPORT <span class="keyword">const</span> <span class="keyword">unsigned</span> <span class="keyword">char</span> YYAsyncLayerVersionString[];</span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;YYAsyncLayer/YYSentinel.h&gt;</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;YYAsyncLayer/YYTransaction.h&gt;</span></span></span><br><span class="line"><span class="meta">#else</span></span><br><span class="line"><span class="meta">#import <span class="meta-string">"YYSentinel.h"</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">"YYTransaction.h"</span></span></span><br><span class="line"><span class="meta">#endif</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@class</span> <span class="title">YYAsyncLayerDisplayTask</span>;</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">NS_ASSUME_NONNULL_BEGIN</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">     YYAsyncLayer类是用于异步渲染内容的CALayer的子类。</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">    @讨论 当图层需要更新其内容时，它会询问委托人</span></span><br><span class="line"><span class="comment">    用于异步显示任务以在后台队列中呈现内容。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">YYAsyncLayer</span> : <span class="title">CALayer</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">//是否异步绘制的BOOl类型属性，默认YES</span></span><br><span class="line"><span class="keyword">@property</span> <span class="built_in">BOOL</span> displaysAsynchronously;</span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">     YYAsyncLayer的委托协议。 YYAsyncLayer的代表（通常是UIView）</span></span><br><span class="line"><span class="comment">   必须在该协议中实施该方法。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">@protocol</span> <span class="title">YYAsyncLayerDelegate</span> &lt;<span class="title">NSObject</span>&gt;</span></span><br><span class="line"><span class="keyword">@required</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//当图层的内容需要更新时，调用此方法返回新的显示任务。</span></span><br><span class="line">- (YYAsyncLayerDisplayTask *)newAsyncDisplayTask;</span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">    YYAsyncLayerDisplayTask类，有三个block属性用于绘制的回调操作，从命名可以看出分别是将要绘制，正在绘制，以及绘制完成的回调，可以从block传入的参数BOOL(^isCancelled)(void)判断当前绘制是否被取消。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">YYAsyncLayerDisplayTask</span> : <span class="title">NSObject</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> </span></span><br><span class="line"><span class="comment"> 该块将在异步绘图开始之前调用。</span></span><br><span class="line"><span class="comment">   它将在主线程中调用。</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">   Block参数层：图层。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nullable</span>, <span class="keyword">nonatomic</span>, <span class="keyword">copy</span>) <span class="keyword">void</span> (^willDisplay)(<span class="built_in">CALayer</span> *layer);</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> 调用该块来绘制图层的内容。</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">   @discussion 可以在主线程或后台线程上调用该块，</span></span><br><span class="line"><span class="comment">   所以应该是线程安全的。</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">   Block参数上下文：由图层创建的新位图内容。</span></span><br><span class="line"><span class="comment">   Block参数大小：内容大小（通常与图层的边界大小相同）。</span></span><br><span class="line"><span class="comment">   Block参数isCancelled：如果此块返回“YES”，则方法应取消</span></span><br><span class="line"><span class="comment">     尽快绘制过程并返回。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nullable</span>, <span class="keyword">nonatomic</span>, <span class="keyword">copy</span>) <span class="keyword">void</span> (^display)(<span class="built_in">CGContextRef</span> context, <span class="built_in">CGSize</span> size, <span class="built_in">BOOL</span>(^isCancelled)(<span class="keyword">void</span>));</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> 该块将在异步绘图完成后调用。</span></span><br><span class="line"><span class="comment"> 它将在主线程中调用。</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> Block参数层：图层。</span></span><br><span class="line"><span class="comment"> Block参数完成：如果绘制过程被取消，则为“否”，否则为“是”。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nullable</span>, <span class="keyword">nonatomic</span>, <span class="keyword">copy</span>) <span class="keyword">void</span> (^didDisplay)(<span class="built_in">CALayer</span> *layer, <span class="built_in">BOOL</span> finished);</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">NS_ASSUME_NONNULL_END</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">.m</span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">"YYAsyncLayer.h"</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">"YYSentinel.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#if __has_include(<span class="meta-string">"YYDispatchQueuePool.h"</span>)</span></span><br><span class="line"><span class="meta">#import <span class="meta-string">"YYDispatchQueuePool.h"</span></span></span><br><span class="line"><span class="meta">#else</span></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;libkern/OSAtomic.h&gt;</span></span></span><br><span class="line"><span class="meta">#endif</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//YYAsyncLayer异步绘制的过程就是一个观察者执行的过程。所谓的观察者就是你设置了一个机关，当它被触发的时候可以执行你预设的东西。比如你走到一扇门前，它感应到了你的红外辐射就会打开。</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//async layer也是一样，它会把“感应器”放在run loop里。当run loop要闲下来的时候“感应器”的回调开始执行，告诉async layer可以开始异步渲染了。</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//但是异步渲染要干什么呢？我们现在就来说说异步渲染的内容从哪里来？一个需要异步渲染的view会在定义的时候就把需要异步渲染的内容通过layer保存在view的代理发送给layer。</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//CALayer和UIView的关系</span></span><br><span class="line"><span class="comment">//UIView是显示层，而显示在屏幕上的内容是由CALayer来管理的。CALayer的一个代理方法可以在UIView宿主里实现。</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">///获取这个队列YYAsyncLayerGetDisplayQueue用于绘制（这部分YYKit中有独立的工具YYDispatchQueuePool）。创建队列中有一个参数是告诉队列执行任务的优先级（服务质量）quality of service，在iOS8+之后相比之前系统有所不同。</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//这里用了一个比较巧妙的方法处理，当使用GCD时提交大量并发任务到后台线程导致线程被锁住、休眠的情况，创建与程序当前激活CPU数量（activeProcessorCount）相同的串行队列，并限制MAX_QUEUE_COUNT，将队列存放在数组中。</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//不能无限的开辟线程</span></span><br><span class="line"><span class="comment">//我们都知道，把阻塞主线程执行的代码放入另外的线程里保证APP可以及时的响应用户的操作。但是线程的切换也是需要额外的开销的。也就是说，线程不能无限度的开辟下去。</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//那么，dispatch_queue_t的实例也不能一直增加下去。有人会说可以用dispatch_get_global_queue()来获取系统的队列。没错，但是这个情况只适用于少量的任务分配。因为，系统本身也会往这个queue里添加任务的。</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//所以，我们需要用自己的queue，但是是有限个的。在YY里给这个数量指定的最大值是16。它会首先判断CPU的核数(int)[NSProcessInfo processInfo].activeProcessorCount。如果核数大于给定的最大值则使用最大值。</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//开辟线程的时候使用的是YYKit里自己的一套“线程池”工具来控制开辟的线程数量的。</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="built_in">dispatch_queue_t</span> YYAsyncLayerGetDisplayQueue() &#123;</span><br><span class="line"><span class="meta">#ifdef YYDispatchQueuePool_h</span></span><br><span class="line">    <span class="keyword">return</span> YYDispatchQueueGetForQOS(<span class="built_in">NSQualityOfServiceUserInitiated</span>);</span><br><span class="line"><span class="meta">#else</span></span><br><span class="line"><span class="meta">#define MAX_QUEUE_COUNT 16</span></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> queueCount;</span><br><span class="line">    <span class="keyword">static</span> <span class="built_in">dispatch_queue_t</span> queues[MAX_QUEUE_COUNT];</span><br><span class="line">    <span class="keyword">static</span> <span class="built_in">dispatch_once_t</span> onceToken;</span><br><span class="line">    <span class="keyword">static</span> int32_t counter = <span class="number">0</span>;</span><br><span class="line">    <span class="built_in">dispatch_once</span>(&amp;onceToken, ^&#123;</span><br><span class="line">        <span class="comment">//程序激活的处理器数目，如果核数大于给定的最大值则使用最大值。</span></span><br><span class="line">        queueCount = (<span class="keyword">int</span>)[<span class="built_in">NSProcessInfo</span> processInfo].activeProcessorCount;</span><br><span class="line">        queueCount = queueCount &lt; <span class="number">1</span> ? <span class="number">1</span> : queueCount &gt; MAX_QUEUE_COUNT ? MAX_QUEUE_COUNT : queueCount;</span><br><span class="line">        <span class="keyword">if</span> ([<span class="built_in">UIDevice</span> currentDevice].systemVersion.floatValue &gt;= <span class="number">8.0</span>) &#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="built_in">NSUInteger</span> i = <span class="number">0</span>; i &lt; queueCount; i++) &#123;</span><br><span class="line">                dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INITIATED, <span class="number">0</span>);<span class="comment">//创建设置优先级的实例dispatch_queue_attr_t 这部分内容也在本博客GCD讲解中有提到</span></span><br><span class="line">                queues[i] = dispatch_queue_create(<span class="string">"com.ibireme.yykit.render"</span>, attr);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="built_in">NSUInteger</span> i = <span class="number">0</span>; i &lt; queueCount; i++) &#123;</span><br><span class="line">                queues[i] = dispatch_queue_create(<span class="string">"com.ibireme.yykit.render"</span>, DISPATCH_QUEUE_SERIAL);</span><br><span class="line">                dispatch_set_target_queue(queues[i], dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>));<span class="comment">//设置dispatch_get_global_queue为目标队列 就是把dispatch_queue_create创建的queue的优先级设置为和dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)为同一优先级。这部分内容也在本博客GCD讲解中有提到</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="comment">//给counter +1</span></span><br><span class="line">    int32_t cur = OSAtomicIncrement32(&amp;counter);</span><br><span class="line">    <span class="keyword">if</span> (cur &lt; <span class="number">0</span>) cur = -cur;</span><br><span class="line">    <span class="comment">//每次从数组取出</span></span><br><span class="line">    <span class="keyword">return</span> queues[(cur) % queueCount];</span><br><span class="line"><span class="meta">#undef MAX_QUEUE_COUNT</span></span><br><span class="line"><span class="meta">#endif</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//创建默认优先级的YYAsyncLayerGetReleaseQueue队列</span></span><br><span class="line"><span class="keyword">static</span> <span class="built_in">dispatch_queue_t</span> YYAsyncLayerGetReleaseQueue() &#123;</span><br><span class="line"><span class="meta">#ifdef YYDispatchQueuePool_h</span></span><br><span class="line">    <span class="keyword">return</span> YYDispatchQueueGetForQOS(<span class="built_in">NSQualityOfServiceDefault</span>);</span><br><span class="line"><span class="meta">#else</span></span><br><span class="line">    <span class="keyword">return</span> dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, <span class="number">0</span>);</span><br><span class="line"><span class="meta">#endif</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">YYAsyncLayerDisplayTask</span></span></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">YYAsyncLayer</span> </span>&#123;</span><br><span class="line">    YYSentinel *_sentinel;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">#pragma mark - Override</span></span><br><span class="line"></span><br><span class="line">+ (<span class="keyword">id</span>)defaultValueForKey:(<span class="built_in">NSString</span> *)key &#123;</span><br><span class="line">    <span class="keyword">if</span> ([key isEqualToString:<span class="string">@"displaysAsynchronously"</span>]) &#123;</span><br><span class="line">        <span class="keyword">return</span> @(<span class="literal">YES</span>);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> [<span class="keyword">super</span> defaultValueForKey:key];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">instancetype</span>)init &#123;</span><br><span class="line">    <span class="keyword">self</span> = [<span class="keyword">super</span> init];</span><br><span class="line">    <span class="keyword">static</span> <span class="built_in">CGFloat</span> scale; <span class="comment">//global</span></span><br><span class="line">    <span class="keyword">static</span> <span class="built_in">dispatch_once_t</span> onceToken;</span><br><span class="line">    <span class="built_in">dispatch_once</span>(&amp;onceToken, ^&#123;</span><br><span class="line">        scale = [<span class="built_in">UIScreen</span> mainScreen].scale;</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">self</span>.contentsScale = scale;</span><br><span class="line">    _sentinel = [YYSentinel new];</span><br><span class="line">    _displaysAsynchronously = <span class="literal">YES</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">self</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//视图被释放调用了dealloc方法，后台的绘制任务被取消</span></span><br><span class="line">- (<span class="keyword">void</span>)dealloc &#123;</span><br><span class="line">    [_sentinel increase];</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//视图调用setNeedsDisplay时说明视图的内容需要被更新，将当前的绘制任务取消，需要重新显示</span></span><br><span class="line">- (<span class="keyword">void</span>)setNeedsDisplay &#123;</span><br><span class="line">    [<span class="keyword">self</span> _cancelAsyncDisplay];<span class="comment">//先将后台的绘制任务取消，再去进行新的绘制</span></span><br><span class="line">    [<span class="keyword">super</span> setNeedsDisplay];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//重写CALayer的display 方法来调用绘制的方法- (void)_displayAsync:(BOOL)async。</span></span><br><span class="line">- (<span class="keyword">void</span>)display &#123;</span><br><span class="line">    <span class="keyword">super</span>.contents = <span class="keyword">super</span>.contents;</span><br><span class="line">    [<span class="keyword">self</span> _displayAsync:_displaysAsynchronously];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">#pragma mark - Private</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//        主要是一些逻辑判断以及绘制函数，在异步执行之前通过YYAsyncLayerGetDisplayQueue创建的队列，这里通过YYSentinel判断当前的value是否等于之前的值，如果不相等，说明绘制任务被取消了，绘制过程会多次判断是否取消，如果是则return，保证被取消的任务能及时退出，如果绘制完毕则设置图片到layer.contents。</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//        关于后台的绘制任务何时会被取消，下面两种情况需要取消，并调用了YYSentinel的increase方法，使value值增加（线程安全）：</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//        1、在视图调用setNeedsDisplay时说明视图的内容需要被更新，将当前的绘制任务取消，需要重新显示。</span></span><br><span class="line"><span class="comment">//        2、以及视图被释放调用了dealloc方法。</span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)_displayAsync:(<span class="built_in">BOOL</span>)async &#123;</span><br><span class="line">    __<span class="keyword">strong</span> <span class="keyword">id</span>&lt;YYAsyncLayerDelegate&gt; delegate = (<span class="keyword">id</span>)<span class="keyword">self</span>.delegate;</span><br><span class="line">    YYAsyncLayerDisplayTask *task = [delegate newAsyncDisplayTask];<span class="comment">//代理中提供方法用于回调绘制的代码</span></span><br><span class="line">    <span class="keyword">if</span> (!task.display) &#123;</span><br><span class="line">        <span class="keyword">if</span> (task.willDisplay) task.willDisplay(<span class="keyword">self</span>);</span><br><span class="line">        <span class="keyword">self</span>.contents = <span class="literal">nil</span>;</span><br><span class="line">        <span class="keyword">if</span> (task.didDisplay) task.didDisplay(<span class="keyword">self</span>, <span class="literal">YES</span>);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//    绘制的代码，主要是一些逻辑判断以及绘制函数，在异步执行之前通过YYAsyncLayerGetDisplayQueue创建的队列，这里通过YYSentinel判断当前的value是否等于之前的值，如果不相等，说明绘制任务被取消了，绘制过程会多次判断是否取消，如果是则return，保证被取消的任务能及时退出，如果绘制完毕则设置图片到layer.contents</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (async) &#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (task.willDisplay) task.willDisplay(<span class="keyword">self</span>);<span class="comment">//Layer图层本身传如到willDisplay的Block属性</span></span><br><span class="line">        YYSentinel *sentinel = _sentinel;</span><br><span class="line">        int32_t value = sentinel.value;<span class="comment">//通过YYSentinel判断当前的value是否等于之前的值，如果不相等，说明绘制任务被取消了</span></span><br><span class="line">        <span class="built_in">BOOL</span> (^isCancelled)(<span class="keyword">void</span>) = ^<span class="built_in">BOOL</span>() &#123;</span><br><span class="line">            <span class="keyword">return</span> value != sentinel.value;</span><br><span class="line">        &#125;;</span><br><span class="line">        <span class="built_in">CGSize</span> size = <span class="keyword">self</span>.bounds.size;</span><br><span class="line">        <span class="built_in">BOOL</span> opaque = <span class="keyword">self</span>.opaque;</span><br><span class="line">        <span class="built_in">CGFloat</span> scale = <span class="keyword">self</span>.contentsScale;</span><br><span class="line">        <span class="built_in">CGColorRef</span> backgroundColor = (opaque &amp;&amp; <span class="keyword">self</span>.backgroundColor) ? <span class="built_in">CGColorRetain</span>(<span class="keyword">self</span>.backgroundColor) : <span class="literal">NULL</span>;</span><br><span class="line">        <span class="keyword">if</span> (size.width &lt; <span class="number">1</span> || size.height &lt; <span class="number">1</span>) &#123;</span><br><span class="line">            <span class="built_in">CGImageRef</span> image = (__bridge_retained <span class="built_in">CGImageRef</span>)(<span class="keyword">self</span>.contents);</span><br><span class="line">            <span class="keyword">self</span>.contents = <span class="literal">nil</span>;</span><br><span class="line">            <span class="keyword">if</span> (image) &#123;</span><br><span class="line">                <span class="built_in">dispatch_async</span>(YYAsyncLayerGetReleaseQueue(), ^&#123;</span><br><span class="line">                    <span class="built_in">CFRelease</span>(image);</span><br><span class="line">                &#125;);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (task.didDisplay) task.didDisplay(<span class="keyword">self</span>, <span class="literal">YES</span>);</span><br><span class="line">            <span class="built_in">CGColorRelease</span>(backgroundColor);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="built_in">dispatch_async</span>(YYAsyncLayerGetDisplayQueue(), ^&#123;</span><br><span class="line">            <span class="keyword">if</span> (isCancelled()) &#123;</span><br><span class="line">                <span class="built_in">CGColorRelease</span>(backgroundColor);</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="built_in">UIGraphicsBeginImageContextWithOptions</span>(size, opaque, scale);</span><br><span class="line">            <span class="built_in">CGContextRef</span> context = <span class="built_in">UIGraphicsGetCurrentContext</span>();</span><br><span class="line">            <span class="keyword">if</span> (opaque) &#123; <span class="comment">//不透明</span></span><br><span class="line">                <span class="built_in">CGContextSaveGState</span>(context); &#123;</span><br><span class="line">                    <span class="keyword">if</span> (!backgroundColor || <span class="built_in">CGColorGetAlpha</span>(backgroundColor) &lt; <span class="number">1</span>) &#123;</span><br><span class="line">                        <span class="built_in">CGContextSetFillColorWithColor</span>(context, [<span class="built_in">UIColor</span> whiteColor].CGColor);</span><br><span class="line">                        <span class="built_in">CGContextAddRect</span>(context, <span class="built_in">CGRectMake</span>(<span class="number">0</span>, <span class="number">0</span>, size.width * scale, size.height * scale));</span><br><span class="line">                        <span class="built_in">CGContextFillPath</span>(context);</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">if</span> (backgroundColor) &#123;</span><br><span class="line">                        <span class="built_in">CGContextSetFillColorWithColor</span>(context, backgroundColor);</span><br><span class="line">                        <span class="built_in">CGContextAddRect</span>(context, <span class="built_in">CGRectMake</span>(<span class="number">0</span>, <span class="number">0</span>, size.width * scale, size.height * scale));</span><br><span class="line">                        <span class="built_in">CGContextFillPath</span>(context);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="built_in">CGContextRestoreGState</span>(context);</span><br><span class="line">                <span class="built_in">CGColorRelease</span>(backgroundColor);</span><br><span class="line">            &#125;</span><br><span class="line">            task.display(context, size, isCancelled);</span><br><span class="line">            <span class="keyword">if</span> (isCancelled()) &#123;</span><br><span class="line">                <span class="built_in">UIGraphicsEndImageContext</span>();</span><br><span class="line">                <span class="built_in">dispatch_async</span>(dispatch_get_main_queue(), ^&#123;</span><br><span class="line">                    <span class="keyword">if</span> (task.didDisplay) task.didDisplay(<span class="keyword">self</span>, <span class="literal">NO</span>);</span><br><span class="line">                &#125;);</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="built_in">UIImage</span> *image = <span class="built_in">UIGraphicsGetImageFromCurrentImageContext</span>();</span><br><span class="line">            <span class="built_in">UIGraphicsEndImageContext</span>();</span><br><span class="line">            <span class="keyword">if</span> (isCancelled()) &#123;</span><br><span class="line">                <span class="built_in">dispatch_async</span>(dispatch_get_main_queue(), ^&#123;</span><br><span class="line">                    <span class="keyword">if</span> (task.didDisplay) task.didDisplay(<span class="keyword">self</span>, <span class="literal">NO</span>);</span><br><span class="line">                &#125;);</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="built_in">dispatch_async</span>(dispatch_get_main_queue(), ^&#123;<span class="comment">//回归主线程</span></span><br><span class="line">                <span class="keyword">if</span> (isCancelled()) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (task.didDisplay) task.didDisplay(<span class="keyword">self</span>, <span class="literal">NO</span>);</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="keyword">self</span>.contents = (__bridge <span class="keyword">id</span>)(image.CGImage);</span><br><span class="line">                    <span class="keyword">if</span> (task.didDisplay) task.didDisplay(<span class="keyword">self</span>, <span class="literal">YES</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        [_sentinel increase];</span><br><span class="line">        <span class="keyword">if</span> (task.willDisplay) task.willDisplay(<span class="keyword">self</span>);</span><br><span class="line">        <span class="built_in">UIGraphicsBeginImageContextWithOptions</span>(<span class="keyword">self</span>.bounds.size, <span class="keyword">self</span>.opaque, <span class="keyword">self</span>.contentsScale);</span><br><span class="line">        <span class="built_in">CGContextRef</span> context = <span class="built_in">UIGraphicsGetCurrentContext</span>();</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">self</span>.opaque) &#123;</span><br><span class="line">            <span class="built_in">CGSize</span> size = <span class="keyword">self</span>.bounds.size;</span><br><span class="line">            size.width *= <span class="keyword">self</span>.contentsScale;</span><br><span class="line">            size.height *= <span class="keyword">self</span>.contentsScale;</span><br><span class="line">            <span class="built_in">CGContextSaveGState</span>(context); &#123;</span><br><span class="line">                <span class="keyword">if</span> (!<span class="keyword">self</span>.backgroundColor || <span class="built_in">CGColorGetAlpha</span>(<span class="keyword">self</span>.backgroundColor) &lt; <span class="number">1</span>) &#123;</span><br><span class="line">                    <span class="built_in">CGContextSetFillColorWithColor</span>(context, [<span class="built_in">UIColor</span> whiteColor].CGColor);</span><br><span class="line">                    <span class="built_in">CGContextAddRect</span>(context, <span class="built_in">CGRectMake</span>(<span class="number">0</span>, <span class="number">0</span>, size.width, size.height));</span><br><span class="line">                    <span class="built_in">CGContextFillPath</span>(context);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">self</span>.backgroundColor) &#123;</span><br><span class="line">                    <span class="built_in">CGContextSetFillColorWithColor</span>(context, <span class="keyword">self</span>.backgroundColor);</span><br><span class="line">                    <span class="built_in">CGContextAddRect</span>(context, <span class="built_in">CGRectMake</span>(<span class="number">0</span>, <span class="number">0</span>, size.width, size.height));</span><br><span class="line">                    <span class="built_in">CGContextFillPath</span>(context);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="built_in">CGContextRestoreGState</span>(context);</span><br><span class="line">        &#125;</span><br><span class="line">        task.display(context, <span class="keyword">self</span>.bounds.size, ^&#123;<span class="keyword">return</span> <span class="literal">NO</span>;&#125;);</span><br><span class="line">        <span class="built_in">UIImage</span> *image = <span class="built_in">UIGraphicsGetImageFromCurrentImageContext</span>();</span><br><span class="line">        <span class="built_in">UIGraphicsEndImageContext</span>();</span><br><span class="line">        <span class="keyword">self</span>.contents = (__bridge <span class="keyword">id</span>)(image.CGImage);</span><br><span class="line">        <span class="keyword">if</span> (task.didDisplay) task.didDisplay(<span class="keyword">self</span>, <span class="literal">YES</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//取消异步绘制的任务</span></span><br><span class="line">- (<span class="keyword">void</span>)_cancelAsyncDisplay &#123;</span><br><span class="line">    [_sentinel increase];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<h2 id="YYSentinel"><a href="#YYSentinel" class="headerlink" title="YYSentinel"></a>YYSentinel</h2><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">.h</span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;Foundation/Foundation.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="built_in">NS_ASSUME_NONNULL_BEGIN</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> YYSentinel是一个线程安全递增计数器。</span></span><br><span class="line"><span class="comment">   它可能在一些多线程情况下使用。</span></span><br><span class="line"><span class="comment"> 线程安全的计数器</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">YYSentinel</span> : <span class="title">NSObject</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> 当前计数</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="comment">/// Returns the current value of the counter.</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">readonly</span>) int32_t value;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> 原子性增加值</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment"> @return 新值</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="comment">/// Increase the value atomically.</span></span><br><span class="line"><span class="comment">/// @return The new value.</span></span><br><span class="line">- (int32_t)increase;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">NS_ASSUME_NONNULL_END</span></span><br><span class="line"></span><br><span class="line">.m</span><br><span class="line"></span><br><span class="line"><span class="meta">#import <span class="meta-string">"YYSentinel.h"</span></span></span><br><span class="line"><span class="meta">#import <span class="meta-string">&lt;libkern/OSAtomic.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">YYSentinel</span> </span>&#123;</span><br><span class="line">    int32_t _value;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (int32_t)value &#123;</span><br><span class="line">    <span class="keyword">return</span> _value;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (int32_t)increase &#123;</span><br><span class="line"><span class="comment">//    自增加的方法返回一个新的value值，用于判断异步绘制任务是否被取消的工具。</span></span><br><span class="line">    <span class="keyword">return</span> OSAtomicIncrement32(&amp;_value);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<p>##总结</p>
+<blockquote>
+<p>我们把整个异步渲染的过程来串联起来。</p>
+<p>对一个包含了<code>YYAsyncLayer</code>的<code>view</code>，比如<code>YYLable</code>,重写<code>layoutSubviews</code>方法添加对layer的<code>setNeedsDisplay</code>方法的调用。</p>
+<p>这样一个调用链就形成了：用户操作-&gt;<code>RunLoop(Waiting | Exiting)</code>-&gt;调用observer的回调-&gt;<code>[view layoutSubviews]</code>-&gt;<code>[view.layer setNeedsDisplay]</code>-&gt;<code>[layer display]</code>-&gt;<code>[layer _displayAsync]</code>异步绘制开始（准确的说是_displayAsync方法的参数为true的时候开始异步绘制）。</p>
+<p>但是这并没有用到RunLoop。所以代码会修改为每次调用<code>layoutSubviews</code>的时候给RunLoop提交一个异步绘制的任务.</p>
+</blockquote>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/IOS/" rel="tag"># IOS</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/04/21/CFRunLoop应用/" rel="next" title="CFRunLoop应用">
+                <i class="fa fa-chevron-left"></i> CFRunLoop应用
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/avatar.jpg"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description">------ IOS | Python ------</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#YYAsyncLayer"><span class="nav-number">1.</span> <span class="nav-text">YYAsyncLayer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#YYTransaction"><span class="nav-number">2.</span> <span class="nav-text">YYTransaction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#YYAsyncLayer-1"><span class="nav-number">3.</span> <span class="nav-text">YYAsyncLayer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#YYSentinel"><span class="nav-number">4.</span> <span class="nav-text">YYSentinel</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2015 &mdash; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+
+  
+</div>
+
+
+ <!-- <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v</div>
+-->
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v="></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v="></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v="></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v="></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v="></script>
+<script type="text/javascript" src="/js/src/post-details.js?v="></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v="></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
