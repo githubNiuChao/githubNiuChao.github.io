@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-minimal.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="IOS," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="NSString?copy:strong直接上代码： 对属性进行不可变字符串的赋值12345678910111213141516171819202122232425262728293031@interface ViewController ()@property (nonatomic, copy) NSString *copyedStr;//不可以写成copyStr会报错，意思是不能使用copy">
+<meta name="keywords" content="IOS">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NSString属性copy&#x2F;strong 以及 NSMutableString属性copy&#x2F;strong">
+<meta property="og:url" content="http://www.niu-chao.top/2015/11/02/NSString">
+<meta property="og:site_name" content="一头驮砖的牛">
+<meta property="og:description" content="NSString?copy:strong直接上代码： 对属性进行不可变字符串的赋值12345678910111213141516171819202122232425262728293031@interface ViewController ()@property (nonatomic, copy) NSString *copyedStr;//不可以写成copyStr会报错，意思是不能使用copy">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-04-12T12:07:35.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="NSString属性copy&#x2F;strong 以及 NSMutableString属性copy&#x2F;strong">
+<meta name="twitter:description" content="NSString?copy:strong直接上代码： 对属性进行不可变字符串的赋值12345678910111213141516171819202122232425262728293031@interface ViewController ()@property (nonatomic, copy) NSString *copyedStr;//不可以写成copyStr会报错，意思是不能使用copy">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.niu-chao.top/2015/11/02/NSString"/>
+
+
+
+
+
+
+<script>
+    (function(){
+        if(''){
+            if (prompt('请输入文章密码') !== ''){
+                alert('密码错误！');
+                history.back();
+            }
+        }
+    })();
+</script>
+
+  <title>NSString属性copy/strong 以及 NSMutableString属性copy/strong | 一头驮砖的牛</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+
+    <a href="https://github.com/githubNiuChao" class="github-corner" aria-label="View source on Github"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+    
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">一头驮砖的牛</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.niu-chao.top/2015/11/02/NSString?copy:strong以及NSMutableString?copy:strong/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="一头驮砖的牛">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">NSString属性copy/strong 以及 NSMutableString属性copy/strong</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2015-11-02T10:43:12+08:00">
+                2015-11-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <hr>
+<h2 id="NSString-copy-strong"><a href="#NSString-copy-strong" class="headerlink" title="NSString?copy:strong"></a>NSString?copy:strong</h2><p>直接上代码：</p>
+<h3 id="对属性进行不可变字符串的赋值"><a href="#对属性进行不可变字符串的赋值" class="headerlink" title="对属性进行不可变字符串的赋值"></a>对属性进行不可变字符串的赋值</h3><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">ViewController</span> ()</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">copy</span>) <span class="built_in">NSString</span> *copyedStr;<span class="comment">//不可以写成copyStr会报错，意思是不能使用copy来作为开头命名，copy是cocoa用的，就是这么屌</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSString</span> *strongStr;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">ViewController</span></span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)viewDidLoad &#123;</span><br><span class="line">    [<span class="keyword">super</span> viewDidLoad];</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="built_in">NSString</span> *testStr = [<span class="built_in">NSString</span> stringWithFormat:<span class="string">@"牛超"</span>];</span><br><span class="line">    <span class="keyword">self</span>.strongStr = testStr;</span><br><span class="line">    <span class="keyword">self</span>.copyedStr = testStr;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//前面的是内存地址，后面的是指针地址</span></span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"testStr:   %p, %p"</span>,testStr,&amp;testStr);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"strongStr: %p, %p"</span>,_strongStr,&amp;_strongStr);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"copyedStr: %p, %p"</span>,_copyedStr,&amp;_copyedStr);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"textStr的引用计数=%lu strongStr引用计数=%lu copyedStr的引用计数=%lu"</span>,testStr.retainCount,_strongStr.retainCount,_copyedStr.retainCount);</span><br><span class="line"></span><br><span class="line">    打印结果：</span><br><span class="line">    <span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">58679</span>:<span class="number">12037746</span>] testStr:   <span class="number">0x6000000290c0</span>, <span class="number">0x7fff55b1dbe8</span></span><br><span class="line">    <span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">58679</span>:<span class="number">12037746</span>] strongStr: <span class="number">0x6000000290c0</span>, <span class="number">0x7fad10408fb8</span></span><br><span class="line">    <span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">58679</span>:<span class="number">12037746</span>] copyedStr: <span class="number">0x6000000290c0</span>, <span class="number">0x7fad10408fb0</span></span><br><span class="line">    <span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">58679</span>:<span class="number">12037746</span>] textStr的引用计数=<span class="number">3</span> strongStr引用计数=<span class="number">3</span> copyedStr的引用计数=<span class="number">3</span></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>根据输出的内存地址，我们发现，不管用的是strong还是copy，指向的都是同一个地址，也就是testStr的地址。<br>strongStr和copyedStr都只是对testStr的引用，只会导致testStr的计数器加1，并没有拷贝一份新的，就是说有三个指针地址指向一块内存地址,所以他们的引用计数都是3。</p>
+<p><strong>这里加深一下对浅拷贝的理解，这里不管是strongStr还是copyedStr都只是对testStr进行了浅拷贝，因为只是复制了一份新的指针地址，而内存地址并没有改变！！！</strong></p>
+</blockquote>
+<h3 id="对属性进行可变字符串的赋值"><a href="#对属性进行可变字符串的赋值" class="headerlink" title="对属性进行可变字符串的赋值"></a>对属性进行可变字符串的赋值</h3><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)viewDidLoad &#123;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">NSMutableString</span> *testStr = [<span class="built_in">NSMutableString</span> stringWithFormat:<span class="string">@"牛超"</span>];</span><br><span class="line">    <span class="keyword">self</span>.strongStr = testStr;</span><br><span class="line">    <span class="keyword">self</span>.copyedStr = testStr;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"testStr:   %p, %p"</span>,testStr,&amp;testStr);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"strongStr: %p, %p"</span>,_strongStr,&amp;_strongStr);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"copyedStr: %p, %p"</span>,_copyedStr,&amp;_copyedStr);</span><br><span class="line"></span><br><span class="line">    [testStr appendString:<span class="string">@"大帅哥"</span>];<span class="comment">//修改一下</span></span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"testStr:   %@, %p"</span>,testStr,&amp;testStr);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"strongStr: %@, %p"</span>,_strongStr,&amp;_strongStr);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"copyedStr: %@, %p"</span>,_copyedStr,&amp;_copyedStr);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"textStr的引用计数=%lu strongStr引用计数=%lu copyedStr的引用计数=%lu"</span>,testStr.retainCount,_strongStr.retainCount,_copyedStr.retainCount);</span><br><span class="line"></span><br><span class="line">    打印结果</span><br><span class="line">    <span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">58737</span>:<span class="number">12041684</span>] testStr:   <span class="number">0x6000004443b0</span>, <span class="number">0x7fff50091be8</span></span><br><span class="line">    <span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">58737</span>:<span class="number">12041684</span>] strongStr: <span class="number">0x6000004443b0</span>, <span class="number">0x7fdd58f0af38</span></span><br><span class="line">    <span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">58737</span>:<span class="number">12041684</span>] copyedStr: <span class="number">0x600000028ee0</span>, <span class="number">0x7fdd58f0af30</span></span><br><span class="line">    <span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">58737</span>:<span class="number">12041684</span>] testStr:   牛超大帅哥, <span class="number">0x7fff50091be8</span></span><br><span class="line">    <span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">58737</span>:<span class="number">12041684</span>] strongStr: 牛超大帅哥, <span class="number">0x7fdd58f0af38</span></span><br><span class="line">    <span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">58737</span>:<span class="number">12041684</span>] copyedStr: 牛超, <span class="number">0x7fdd58f0af30</span></span><br><span class="line">    <span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">58737</span>:<span class="number">12041684</span>] textStr的引用计数=<span class="number">2</span> strongStr引用计数=<span class="number">2</span> copyedStr的引用计数=<span class="number">1</span></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>可以这个时候，copy修饰的copyedStr字符串，已经不再是简单的引用了，而是拷贝了一个新的，重新开辟了内存空间，让copyedStr指向了这个新的内存地址 == <strong>copyedStr进行了深拷贝</strong>。<br>而此时的strongStr还只是对testStr进行了浅拷贝，只是复制了一份新的指针地址，内存地址并没有改变 === <strong>strongStr进行的浅拷贝</strong>。<br>所以此时testStr的retainCount应该是2，strongStr的retainCount应该也是2，就是说有两个指针地址指向一块内存地址。</p>
+<p>后面我们把testStr修改一下，后面接上了“大帅哥”，输出内容会发现testStr变化后，strongStr也会随之改变了，为什么？？？因为strong指向的内存地址和testStr指向的内存地址是一样一样一样的，记住是一样的，他们的内存地址都是一样，只是strongStr加了一个指向这块内存空间的指针地址，只是增加的一个引用计数。</p>
+<p>而copyStr则为什么不会变化呢？？因为copyStr开辟了新的内存空间了，进行深拷贝了，所以copyStr是新的内存空间，新的指针，它和testStr完全没有关联了，所以copyedStr的retainCount和那两个同流合污的家伙不一样了。。。</p>
+</blockquote>
+<p><strong>由上面的例子可以得出：总结</strong></p>
+<blockquote>
+<p>一、当源字符串是NSString时，是不可变字符串，所以，不管是使用strong还是copy修饰，都是指向原来的对象即指向原来的内存空间，copy与strong操作都只是做了次<strong>浅拷贝</strong>。<br>二、而当源字符串是NSMutableString时，strong还是只做了浅拷贝，只是将原字符串的引用计数加1了，（<strong>需要注意的是，此时_strongString的类型实际上是NSMutableString，而不是NSString</strong>)，而copy则是对原字符串做了次<strong>深拷贝</strong>，从而生成了一个新的对象。（<strong>需要注意的是，这个copy属性对象的类型始终是NSString，而不是NSMutableString</strong>），如果想让拷贝过来的对象是可变的，就需要使mutableCopy函数进行操作。</p>
+</blockquote>
+<p>说来说去，说来说去那么NSString到底是用copy还是strong呢？</p>
+<blockquote>
+<p>本质上来讲,copy和strong都没有错,但不是说,NSString用copy就一定是最好的—–简直是个屁话，没说一样。</p>
+<p>当源字符串是NSString时，由于字符串是不可变的，所以，不管是strong还是copy属性的对象，都是指向源对象，copy操作只是做了次浅拷贝。</p>
+<p>当源字符串是NSMutableString时，strong属性只是增加了源字符串的引用计数，而copy属性则是对源字符串做了次深拷贝，产生一个新的对象，且copy属性对象指向这个新的对象。另外需要注意的是，这个copy属性对象的类型始终是NSString，而不是NSMutableString，因此其是不可变的。</p>
+</blockquote>
+<p>这里还有一个性能问题，即在源字符串是NSMutableString，strong是单纯的增加对象的引用计数，而copy操作是执行了一次深拷贝，所以性能上会有所差异。而如果源字符串是NSString时，则没有这个问题。</p>
+<p>举个栗子为什么会有性能问题，<br><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">@property</span>(<span class="keyword">nonatomic</span>,<span class="keyword">copy</span>) <span class="built_in">NSString</span> *str;</span><br><span class="line">  <span class="built_in">NSMutableString</span> *mutableStr;</span><br><span class="line">  str = mutableStr;</span><br><span class="line"></span><br><span class="line"><span class="comment">//copy修饰的NSString在进行set操作时,底层是这样实现的,进行str = mutableStr操作时,内部会执行一个操作:</span></span><br><span class="line">  str = [mutableStr <span class="keyword">copy</span>];</span><br><span class="line"><span class="comment">//那么这个copy里面做了什么呢?</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> ([str isMemberOfClass:[str <span class="keyword">class</span>]])</span><br></pre></td></tr></table></figure></p>
+<blockquote>
+<p>没错,就是进行一次判断,判断来源如果是可变的,那么会进行一次深拷贝,如果是不可变,那么好,接下来的操作就跟strong修饰的没有区别,进行浅拷贝;</p>
+<p>所以,copy操作内部会进行判断,你别小看了这个if操作所消耗的内存,一次不重要,十次可能也可以忽略不计,但当你的项目十分庞大时,有成百上千个个NSString对象,多多少少会对你的app的性能造成一定的影响.</p>
+</blockquote>
+<p><strong>最后真的是最后了：</strong></p>
+<blockquote>
+<p>当你给你的NSString对象赋值时,如果来源是NSMutableString,<strong>那么这种情况就必须要用copy</strong>，可以避免NSMutableString带来的非预期问题，就是你不知道NSMutableString在哪改动了，如果用strong的话，你之前需要赋值的NSString对象也会跟随后面来源NSMutableString的改变而改变，但是你最初的需要的是NSString类型的，你肯定是不想让他随便改动的;<br>如果你<strong>确定</strong>给你的属性赋值的来源是不可变类型的,比如@”牛超大帅哥”这种固定的字符串,那么用strong比较好一点，能节省一点性能，哈哈哈哈。</p>
+</blockquote>
+<h2 id="NSMutableString-copy-strong"><a href="#NSMutableString-copy-strong" class="headerlink" title="NSMutableString?copy/strong"></a>NSMutableString?copy/strong</h2><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">NSMutableString</span> *testStr = [<span class="string">@"牛超"</span> mutableCopy];</span><br><span class="line"><span class="keyword">self</span>.strongMutStr = testStr;</span><br><span class="line"><span class="keyword">self</span>.copyedMutStr = testStr;</span><br><span class="line"></span><br><span class="line"><span class="built_in">NSLog</span>(<span class="string">@"testStr:   %p, %p"</span>,testStr,&amp;testStr);</span><br><span class="line"><span class="built_in">NSLog</span>(<span class="string">@"strongMutStr: %p, %p"</span>,_strongMutStr,&amp;_strongMutStr);</span><br><span class="line"><span class="built_in">NSLog</span>(<span class="string">@"copyedMutStr: %p, %p"</span>,_copyedMutStr,&amp;_copyedMutStr);</span><br><span class="line"></span><br><span class="line">[testStr appendString:<span class="string">@"大帅哥"</span>];<span class="comment">//修改一下</span></span><br><span class="line"><span class="built_in">NSLog</span>(<span class="string">@"testStr:   %@, %p"</span>,testStr,&amp;testStr);</span><br><span class="line"><span class="built_in">NSLog</span>(<span class="string">@"strongMutStr: %@, %p"</span>,_strongMutStr,&amp;_strongMutStr);</span><br><span class="line"><span class="built_in">NSLog</span>(<span class="string">@"copyedMutStr: %@, %p"</span>,_copyedMutStr,&amp;_copyedMutStr);</span><br><span class="line"><span class="built_in">NSLog</span>(<span class="string">@"textStr的引用计数=%lu strongMutStr引用计数=%lu copyedMutStr的引用计数=%lu"</span>,testStr.retainCount,_strongMutStr.retainCount,_copyedMutStr.retainCount);</span><br><span class="line"></span><br><span class="line"><span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">60617</span>:<span class="number">12359919</span>] testStr:   <span class="number">0x600000446f90</span>, <span class="number">0x7fff5438cbe8</span></span><br><span class="line"><span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">60617</span>:<span class="number">12359919</span>] strongMutStr: <span class="number">0x600000446f90</span>, <span class="number">0x7fef6140cbe8</span></span><br><span class="line"><span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">60617</span>:<span class="number">12359919</span>] copyedMutStr: <span class="number">0x60000003fca0</span>, <span class="number">0x7fef6140cbe0</span></span><br><span class="line"><span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">60617</span>:<span class="number">12359919</span>] testStr:   牛超大帅哥, <span class="number">0x7fff5438cbe8</span></span><br><span class="line"><span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">60617</span>:<span class="number">12359919</span>] strongMutStr: 牛超大帅哥, <span class="number">0x7fef6140cbe8</span></span><br><span class="line"><span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">60617</span>:<span class="number">12359919</span>] copyedMutStr: 牛超, <span class="number">0x7fef6140cbe0</span></span><br><span class="line"><span class="built_in">NSString</span>?<span class="keyword">copy</span>:<span class="keyword">strong</span>[<span class="number">60617</span>:<span class="number">12359919</span>] textStr的引用计数=<span class="number">2</span> strongMutStr引用计数=<span class="number">2</span> copyedMutStr的引用计数=<span class="number">1</span></span><br></pre></td></tr></table></figure>
+<p>打印结果和NSString属性进行NSMutableString数据源赋值没啥区别：接下来我们进行测试</p>
+<p><strong>后面进行测试：在后面分别加上测试一或者测试二代码</strong><br>测试一、<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"> [<span class="keyword">self</span>.copyedMutStr appendString:<span class="string">@"吗？"</span>];<span class="comment">//使用copy修饰的NSMutableString类型的属性去使用可变的专属方法会崩溃</span></span><br><span class="line">崩溃： *** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: 'Attempt to mutate immutable object with appendString:'</span><br></pre></td></tr></table></figure></p>
+<p>测试二、<br><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">  <span class="built_in">NSString</span> *str = [<span class="built_in">NSString</span> stringWithFormat:<span class="string">@"牛超"</span>];</span><br><span class="line">  <span class="keyword">self</span>.copyedMutStr = [<span class="built_in">NSMutableString</span> stringWithFormat:<span class="string">@"%@"</span>, str];</span><br><span class="line">  <span class="built_in">NSLog</span>(<span class="string">@"self.copyedMutStr的class类型 = %s"</span>,object_getClassName(<span class="keyword">self</span>.copyedMutStr));</span><br><span class="line">  <span class="built_in">NSLog</span>(<span class="string">@"self.copyedMutStr的class类型 = %@"</span>,<span class="built_in">NSStringFromClass</span>([<span class="keyword">self</span>.copyedMutStr <span class="keyword">class</span>]));</span><br><span class="line">  [<span class="keyword">self</span>.copyedMutStr appendString:<span class="string">@"大帅哥吗？"</span>];<span class="comment">//使用copy修饰的NSMutableString类型的属性去使用可变的专属方法会崩溃</span></span><br><span class="line">崩溃：  -[<span class="built_in">NSTaggedPointerString</span> appendString:]: unrecognized selector sent to instance <span class="number">0xa6f61686375696e7</span></span><br></pre></td></tr></table></figure></p>
+<blockquote>
+<p>原因很明显，是向<code>NSTaggedPointerString</code>对象发了一个它不能识别的<code>selector</code>。原因是<code>copy</code>版本的<code>NSMutableString</code>属性本质上不是一个<code>NSMutableString</code>对象，而是一个<code>NSTaggedPointerString</code>对象，它是一个不可变对象。该对象是<code>NSMutableString</code>对象执行<code>copy</code>得来的，还记得我们上一节的结论吗？<strong>（注意：对一个对象执行copy得到的是一个不可变的对象）</strong>。</p>
+</blockquote>
+<p><strong>结论：</strong></p>
+<blockquote>
+<p>定义一个可变类型的属性，不能使用copy，因为copy修饰词在属性set方法赋值时（不管赋值源是可变还是不可变的）产生为的对象是一个不可变对象，跟其可变属性类型是冲突的，当使用可变类型的专属方法时会出现崩溃。</p>
+</blockquote>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/IOS/" rel="tag"># IOS</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/10/08/MarkDown/" rel="next" title="Markdown">
+                <i class="fa fa-chevron-left"></i> Markdown
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/11/02/NSString属性copy:strong 以及 NSMutableString属性copy:strong/" rel="prev" title="NSString属性copy/strong以及NSMutableString属性copy/strong">
+                NSString属性copy/strong以及NSMutableString属性copy/strong <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/avatar.jpg"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description">------ IOS | Python ------</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">15</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#NSString-copy-strong"><span class="nav-number">1.</span> <span class="nav-text">NSString?copy:strong</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#对属性进行不可变字符串的赋值"><span class="nav-number">1.1.</span> <span class="nav-text">对属性进行不可变字符串的赋值</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#对属性进行可变字符串的赋值"><span class="nav-number">1.2.</span> <span class="nav-text">对属性进行可变字符串的赋值</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#NSMutableString-copy-strong"><span class="nav-number">2.</span> <span class="nav-text">NSMutableString?copy/strong</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2015 &mdash; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+
+  
+</div>
+
+
+ <!-- <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v</div>
+-->
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v="></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v="></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v="></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v="></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v="></script>
+<script type="text/javascript" src="/js/src/post-details.js?v="></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v="></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
